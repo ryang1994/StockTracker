@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+
+const API_URL = 'http://localhost:5000/api';
 
 function App() {
   const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     brand: '',
     category: '',
     size: '',
     condition: '',
-    purchasePrice: '',
+    purchase_cost: '',
     status: 'DRAFT',
-    box: ''
+    box_number: ''
   });
+
+  // Fetch items from backend when the app loads
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const fetchItems = async () => {
+    try {
+      const response = await fetch(`${API_URL}/items`);
+      const data = await response.json();
+      setItems(data);
+    } catch (err) {
+      console.error('Failed to fetch items:', err);
+      alert('Could not connect to the backend. Make sure the server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -21,41 +42,63 @@ function App() {
     });
   };
 
-  const handleAddItem = (e) => {
+  const handleAddItem = async (e) => {
     e.preventDefault();
     if (!formData.brand || !formData.category) {
       alert('Please fill in brand and category');
       return;
     }
 
-    const newItem = {
-      id: Date.now(),
-      ...formData,
-      dateAdded: new Date().toLocaleDateString()
-    };
+    try {
+      const response = await fetch(`${API_URL}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
 
-    setItems([newItem, ...items]);
-    setFormData({
-      brand: '',
-      category: '',
-      size: '',
-      condition: '',
-      purchasePrice: '',
-      status: 'DRAFT',
-      box: ''
-    });
+      if (!response.ok) throw new Error('Failed to add item');
+
+      const newItem = await response.json();
+      setItems([newItem, ...items]);
+
+      setFormData({
+        brand: '',
+        category: '',
+        size: '',
+        condition: '',
+        purchase_cost: '',
+        status: 'DRAFT',
+        box_number: ''
+      });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add item. Check the backend is running.');
+    }
   };
 
-  const handleStatusChange = (itemId, newStatus) => {
-    setItems(items.map(item =>
-      item.id === itemId ? { ...item, status: newStatus } : item
-    ));
+  const handleStatusChange = async (itemId, newStatus) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) throw new Error('Failed to update status');
+
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? updatedItem : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status.');
+    }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case 'ACTIVE':
-        return 'green';
       case 'LISTED':
         return 'green';
       case 'SOLD':
@@ -65,16 +108,6 @@ function App() {
       default:
         return 'gray';
     }
-  };
-
-  const getStatusLabel = (status) => {
-    const labels = {
-      'DRAFT': 'Draft',
-      'ACTIVE': 'Active',
-      'LISTED': 'Listed',
-      'SOLD': 'Sold'
-    };
-    return labels[status] || status;
   };
 
   return (
@@ -142,12 +175,12 @@ function App() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="purchasePrice">Purchase Price (£)</label>
+              <label htmlFor="purchase_cost">Purchase Price (£)</label>
               <input
                 type="number"
-                id="purchasePrice"
-                name="purchasePrice"
-                value={formData.purchasePrice}
+                id="purchase_cost"
+                name="purchase_cost"
+                value={formData.purchase_cost}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 step="0.01"
@@ -155,11 +188,11 @@ function App() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="box">Storage Box</label>
+              <label htmlFor="box_number">Storage Box</label>
               <select
-                id="box"
-                name="box"
-                value={formData.box}
+                id="box_number"
+                name="box_number"
+                value={formData.box_number}
                 onChange={handleInputChange}
               >
                 <option value="">Select box</option>
@@ -180,8 +213,10 @@ function App() {
         {/* Inventory List */}
         <section className="inventory-section">
           <h2>Inventory ({items.length})</h2>
-          
-          {items.length === 0 ? (
+
+          {loading ? (
+            <p className="no-items">Loading inventory...</p>
+          ) : items.length === 0 ? (
             <p className="no-items">No items yet. Add your first item above!</p>
           ) : (
             <div className="inventory-list">
@@ -210,24 +245,19 @@ function App() {
                       </select>
                     </div>
 
-                    {item.purchasePrice && (
+                    {item.purchase_cost && (
                       <div className="info-row">
                         <span className="label">Purchase Price:</span>
-                        <span>£{parseFloat(item.purchasePrice).toFixed(2)}</span>
+                        <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
                       </div>
                     )}
 
-                    {item.box && (
+                    {item.box_number && (
                       <div className="info-row">
                         <span className="label">Storage:</span>
-                        <span>Box {item.box}</span>
+                        <span>Box {item.box_number}</span>
                       </div>
                     )}
-
-                    <div className="info-row">
-                      <span className="label">Added:</span>
-                      <span>{item.dateAdded}</span>
-                    </div>
                   </div>
                 </div>
               ))}
