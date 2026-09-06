@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 
 const API_URL = 'http://localhost:5000/api';
+const SERVER_URL = 'http://localhost:5000';
 
 function App() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [formData, setFormData] = useState({
     brand: '',
     category: '',
@@ -16,7 +18,6 @@ function App() {
     box_number: ''
   });
 
-  // Fetch items from backend when the app loads
   useEffect(() => {
     fetchItems();
   }, []);
@@ -42,6 +43,11 @@ function App() {
     });
   };
 
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedPhotos(files);
+  };
+
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!formData.brand || !formData.category) {
@@ -50,6 +56,7 @@ function App() {
     }
 
     try {
+      // Step 1: Create the item
       const response = await fetch(`${API_URL}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,8 +66,30 @@ function App() {
       if (!response.ok) throw new Error('Failed to add item');
 
       const newItem = await response.json();
+
+      // Step 2: If photos were selected, upload them for this item
+      if (selectedPhotos.length > 0) {
+        const photoFormData = new FormData();
+        selectedPhotos.forEach(file => {
+          photoFormData.append('photos', file);
+        });
+
+        const uploadResponse = await fetch(`${API_URL}/items/${newItem.id}/images`, {
+          method: 'POST',
+          body: photoFormData
+        });
+
+        if (!uploadResponse.ok) throw new Error('Failed to upload photos');
+
+        const uploadedImages = await uploadResponse.json();
+        newItem.images = uploadedImages;
+      } else {
+        newItem.images = [];
+      }
+
       setItems([newItem, ...items]);
 
+      // Reset form
       setFormData({
         brand: '',
         category: '',
@@ -70,6 +99,9 @@ function App() {
         status: 'DRAFT',
         box_number: ''
       });
+      setSelectedPhotos([]);
+      document.getElementById('photo-input').value = '';
+
     } catch (err) {
       console.error(err);
       alert('Failed to add item. Check the backend is running.');
@@ -88,7 +120,7 @@ function App() {
 
       const updatedItem = await response.json();
       setItems(items.map(item =>
-        item.id === updatedItem.id ? updatedItem : item
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
       ));
     } catch (err) {
       console.error(err);
@@ -206,6 +238,21 @@ function App() {
               </select>
             </div>
 
+            <div className="form-group">
+              <label htmlFor="photo-input">Photos</label>
+              <input
+                type="file"
+                id="photo-input"
+                accept="image/*"
+                multiple
+                capture="environment"
+                onChange={handlePhotoSelect}
+              />
+              {selectedPhotos.length > 0 && (
+                <span className="photo-count">{selectedPhotos.length} photo(s) selected</span>
+              )}
+            </div>
+
             <button type="submit" className="btn-add">Add Item</button>
           </form>
         </section>
@@ -222,6 +269,15 @@ function App() {
             <div className="inventory-list">
               {items.map(item => (
                 <div key={item.id} className="inventory-card">
+                  {item.images && item.images.length > 0 && (
+                    <div className="card-image">
+                      <img
+                        src={`${SERVER_URL}/${item.images[0].object_key}`}
+                        alt={`${item.brand} ${item.category}`}
+                      />
+                    </div>
+                  )}
+
                   <div className="card-header">
                     <div className="card-title">
                       <h3>{item.brand} {item.category}</h3>
