@@ -8,6 +8,7 @@ function App() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
+  const [activeImageIndex, setActiveImageIndex] = useState({});
   const [formData, setFormData] = useState({
     brand: '',
     category: '',
@@ -56,7 +57,6 @@ function App() {
     }
 
     try {
-      // Step 1: Create the item
       const response = await fetch(`${API_URL}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -67,7 +67,6 @@ function App() {
 
       const newItem = await response.json();
 
-      // Step 2: If photos were selected, upload them for this item
       if (selectedPhotos.length > 0) {
         const photoFormData = new FormData();
         selectedPhotos.forEach(file => {
@@ -89,7 +88,6 @@ function App() {
 
       setItems([newItem, ...items]);
 
-      // Reset form
       setFormData({
         brand: '',
         category: '',
@@ -140,6 +138,18 @@ function App() {
       default:
         return 'gray';
     }
+  };
+
+  const getActiveImage = (item) => {
+    const index = activeImageIndex[item.id] || 0;
+    return item.images && item.images[index] ? item.images[index] : null;
+  };
+
+  const handleThumbnailClick = (itemId, index) => {
+    setActiveImageIndex({
+      ...activeImageIndex,
+      [itemId]: index
+    });
   };
 
   return (
@@ -267,56 +277,73 @@ function App() {
             <p className="no-items">No items yet. Add your first item above!</p>
           ) : (
             <div className="inventory-list">
-              {items.map(item => (
-                <div key={item.id} className="inventory-card">
-                  {item.images && item.images.length > 0 && (
-                    <div className="card-image">
-                      <img
-                        src={`${SERVER_URL}/${item.images[0].object_key}`}
-                        alt={`${item.brand} ${item.category}`}
-                      />
-                    </div>
-                  )}
-
-                  <div className="card-header">
-                    <div className="card-title">
-                      <h3>{item.brand} {item.category}</h3>
-                      <p className="card-meta">{item.size} • {item.condition}</p>
-                    </div>
-                    <div className={`status-light ${getStatusColor(item.status)}`}></div>
-                  </div>
-
-                  <div className="card-body">
-                    <div className="info-row">
-                      <span className="label">Status:</span>
-                      <select
-                        value={item.status}
-                        onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                        className="status-select"
-                      >
-                        <option value="DRAFT">Draft</option>
-                        <option value="ACTIVE">Active</option>
-                        <option value="LISTED">Listed</option>
-                        <option value="SOLD">Sold</option>
-                      </select>
-                    </div>
-
-                    {item.purchase_cost && (
-                      <div className="info-row">
-                        <span className="label">Purchase Price:</span>
-                        <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
+              {items.map(item => {
+                const activeImage = getActiveImage(item);
+                return (
+                  <div key={item.id} className="inventory-card">
+                    {activeImage && (
+                      <div className="card-image">
+                        <img
+                          src={`${SERVER_URL}/${activeImage.object_key}`}
+                          alt={`${item.brand} ${item.category}`}
+                        />
                       </div>
                     )}
 
-                    {item.box_number && (
-                      <div className="info-row">
-                        <span className="label">Storage:</span>
-                        <span>Box {item.box_number}</span>
+                    {item.images && item.images.length > 1 && (
+                      <div className="thumbnail-strip">
+                        {item.images.map((img, index) => (
+                          <img
+                            key={img.id}
+                            src={`${SERVER_URL}/${img.object_key}`}
+                            alt={`thumbnail ${index + 1}`}
+                            className={`thumbnail ${(activeImageIndex[item.id] || 0) === index ? 'active' : ''}`}
+                            onClick={() => handleThumbnailClick(item.id, index)}
+                          />
+                        ))}
                       </div>
                     )}
+
+                    <div className="card-header">
+                      <div className="card-title">
+                        <h3>{item.brand} {item.category}</h3>
+                        <p className="card-meta">{item.size} • {item.condition}</p>
+                      </div>
+                      <div className={`status-light ${getStatusColor(item.status)}`}></div>
+                    </div>
+
+                    <div className="card-body">
+                      <div className="info-row">
+                        <span className="label">Status:</span>
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                          className="status-select"
+                        >
+                          <option value="DRAFT">Draft</option>
+                          <option value="ACTIVE">Active</option>
+                          <option value="LISTED">Listed</option>
+                          <option value="SOLD">Sold</option>
+                        </select>
+                      </div>
+
+                      {item.purchase_cost && (
+                        <div className="info-row">
+                          <span className="label">Purchase Price:</span>
+                          <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {item.box_number && (
+                        <div className="info-row">
+                          <span className="label">Storage:</span>
+                          <span>Box {item.box_number}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
