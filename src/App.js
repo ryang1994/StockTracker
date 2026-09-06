@@ -126,6 +126,24 @@ function App() {
     }
   };
 
+  const handleDeleteItem = async (itemId, itemName) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${itemName}"? This cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete item');
+
+      setItems(items.filter(item => item.id !== itemId));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete item.');
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'ACTIVE':
@@ -340,6 +358,13 @@ function App() {
                           <span>Box {item.box_number}</span>
                         </div>
                       )}
+
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteItem(item.id, `${item.brand} ${item.category}`)}
+                      >
+                        🗑️ Delete Item
+                      </button>
                     </div>
                   </div>
                 );
