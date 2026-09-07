@@ -567,3 +567,76 @@ body {
 .stat-attention {
   border-left-color: #ef4444;
 }
+.card-badges {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem 0;
+  flex-wrap: wrap;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-status {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.badge-days {
+  background: #f3f4f6;
+  color: #555;
+}
+
+.badge-attention {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.inventory-card.needs-attention {
+  border: 2px solid #ef4444;
+}
+
+.profit-positive {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.profit-negative {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.filter-tab {
+  padding: 0.5rem 1rem;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tab:hover {
+  border-color: #667eea;
+}
+
+.filter-tab.active {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+}

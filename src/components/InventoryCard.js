@@ -33,6 +33,16 @@ function InventoryCard({
     }
   };
 
+  const getStatusBadgeText = (status) => {
+    switch (status) {
+      case 'ACTIVE': return 'SELLING';
+      case 'LISTED': return 'SELLING';
+      case 'SOLD': return 'SOLD';
+      case 'DRAFT': return 'DRAFT';
+      default: return status;
+    }
+  };
+
   const index = activeImageIndex || 0;
   const activeImage = item.images && item.images[index] ? item.images[index] : null;
 
@@ -61,8 +71,22 @@ function InventoryCard({
     setSoldPriceInput('');
   };
 
+  const profit = item.status === 'SOLD' && item.sold_price != null && item.purchase_cost != null
+    ? (parseFloat(item.sold_price) - parseFloat(item.purchase_cost))
+    : null;
+
   return (
-    <div className="inventory-card">
+    <div className={`inventory-card ${item.needs_attention ? 'needs-attention' : ''}`}>
+      <div className="card-badges">
+        {item.needs_attention && (
+          <span className="badge badge-attention">⚠️ ATTENTION</span>
+        )}
+        <span className="badge badge-status">{getStatusBadgeText(item.status)}</span>
+        {item.days_held != null && item.status !== 'SOLD' && (
+          <span className="badge badge-days">{item.days_held} days</span>
+        )}
+      </div>
+
       {activeImage && (
         <div className="card-image">
           <img
@@ -224,6 +248,22 @@ function InventoryCard({
                   <div className="info-row">
                     <span className="label">Sold Price:</span>
                     <span>£{parseFloat(item.sold_price).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {profit !== null && (
+                  <div className="info-row">
+                    <span className="label">Profit:</span>
+                    <span className={profit >= 0 ? 'profit-positive' : 'profit-negative'}>
+                      {profit >= 0 ? '+' : ''}£{profit.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                {item.status === 'SOLD' && item.days_to_sell != null && (
+                  <div className="info-row">
+                    <span className="label">Days to Sell:</span>
+                    <span>{item.days_to_sell}</span>
                   </div>
                 )}
 

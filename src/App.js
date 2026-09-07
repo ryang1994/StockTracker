@@ -13,6 +13,7 @@ function App() {
   const [editingItemId, setEditingItemId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [statsRefresh, setStatsRefresh] = useState(0);
+  const [filterStatus, setFilterStatus] = useState('ALL');
 
   useEffect(() => {
     fetchItems();
@@ -143,6 +144,31 @@ function App() {
     setActiveImageIndex({ ...activeImageIndex, [itemId]: index });
   };
 
+  const getFilteredItems = () => {
+    switch (filterStatus) {
+      case 'SELLING':
+        return items.filter(item => item.status === 'ACTIVE' || item.status === 'LISTED');
+      case 'DRAFT':
+        return items.filter(item => item.status === 'DRAFT');
+      case 'SOLD':
+        return items.filter(item => item.status === 'SOLD');
+      case 'ATTENTION':
+        return items.filter(item => item.needs_attention);
+      default:
+        return items;
+    }
+  };
+
+  const filteredItems = getFilteredItems();
+
+  const counts = {
+    ALL: items.length,
+    SELLING: items.filter(i => i.status === 'ACTIVE' || i.status === 'LISTED').length,
+    DRAFT: items.filter(i => i.status === 'DRAFT').length,
+    SOLD: items.filter(i => i.status === 'SOLD').length,
+    ATTENTION: items.filter(i => i.needs_attention).length
+  };
+
   return (
     <div className="App">
       <header className="app-header">
@@ -161,15 +187,48 @@ function App() {
         />
 
         <section className="inventory-section">
-          <h2>Inventory ({items.length})</h2>
+          <h2>Inventory ({filteredItems.length})</h2>
+
+          <div className="filter-tabs">
+            <button
+              className={`filter-tab ${filterStatus === 'ALL' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('ALL')}
+            >
+              All ({counts.ALL})
+            </button>
+            <button
+              className={`filter-tab ${filterStatus === 'SELLING' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('SELLING')}
+            >
+              Selling ({counts.SELLING})
+            </button>
+            <button
+              className={`filter-tab ${filterStatus === 'DRAFT' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('DRAFT')}
+            >
+              Draft ({counts.DRAFT})
+            </button>
+            <button
+              className={`filter-tab ${filterStatus === 'SOLD' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('SOLD')}
+            >
+              Sold ({counts.SOLD})
+            </button>
+            <button
+              className={`filter-tab ${filterStatus === 'ATTENTION' ? 'active' : ''}`}
+              onClick={() => setFilterStatus('ATTENTION')}
+            >
+              ⚠️ Attention ({counts.ATTENTION})
+            </button>
+          </div>
 
           {loading ? (
             <p className="no-items">Loading inventory...</p>
-          ) : items.length === 0 ? (
-            <p className="no-items">No items yet. Add your first item above!</p>
+          ) : filteredItems.length === 0 ? (
+            <p className="no-items">No items in this view.</p>
           ) : (
             <div className="inventory-list">
-              {items.map(item => (
+              {filteredItems.map(item => (
                 <InventoryCard
                   key={item.id}
                   item={item}
