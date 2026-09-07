@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const SERVER_URL = 'http://localhost:5000';
 
@@ -13,8 +13,12 @@ function InventoryCard({
   onEditInputChange,
   onCancelEdit,
   onSaveEdit,
-  onDeleteItem
+  onDeleteItem,
+  onConfirmSale
 }) {
+  const [askingSoldPrice, setAskingSoldPrice] = useState(false);
+  const [soldPriceInput, setSoldPriceInput] = useState('');
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'ACTIVE':
@@ -31,6 +35,31 @@ function InventoryCard({
 
   const index = activeImageIndex || 0;
   const activeImage = item.images && item.images[index] ? item.images[index] : null;
+
+  const handleStatusDropdownChange = (e) => {
+    const newStatus = e.target.value;
+    if (newStatus === 'SOLD') {
+      setSoldPriceInput(item.listing_price || '');
+      setAskingSoldPrice(true);
+    } else {
+      onStatusChange(item.id, newStatus);
+    }
+  };
+
+  const handleConfirmSoldPrice = () => {
+    const price = parseFloat(soldPriceInput);
+    if (isNaN(price) || price < 0) {
+      alert('Please enter a valid price.');
+      return;
+    }
+    onConfirmSale(item.id, price);
+    setAskingSoldPrice(false);
+  };
+
+  const handleCancelSoldPrice = () => {
+    setAskingSoldPrice(false);
+    setSoldPriceInput('');
+  };
 
   return (
     <div className="inventory-card">
@@ -142,57 +171,80 @@ function InventoryCard({
           </div>
 
           <div className="card-body">
-            <div className="info-row">
-              <span className="label">Status:</span>
-              <select
-                value={item.status}
-                onChange={(e) => onStatusChange(item.id, e.target.value)}
-                className="status-select"
-              >
-                <option value="DRAFT">Draft</option>
-                <option value="ACTIVE">Active</option>
-                <option value="LISTED">Listed</option>
-                <option value="SOLD">Sold</option>
-              </select>
-            </div>
-
-            {item.purchase_cost && (
-              <div className="info-row">
-                <span className="label">Purchase Price:</span>
-                <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
+            {askingSoldPrice ? (
+              <div className="sold-price-prompt">
+                <label>Actual sale price (£)</label>
+                <input
+                  type="number"
+                  value={soldPriceInput}
+                  onChange={(e) => setSoldPriceInput(e.target.value)}
+                  step="0.01"
+                  autoFocus
+                />
+                <div className="edit-buttons">
+                  <button className="btn-save" onClick={handleConfirmSoldPrice}>
+                    Confirm Sale
+                  </button>
+                  <button className="btn-cancel" onClick={handleCancelSoldPrice}>
+                    Cancel
+                  </button>
+                </div>
               </div>
-            )}
+            ) : (
+              <>
+                <div className="info-row">
+                  <span className="label">Status:</span>
+                  <select
+                    value={item.status}
+                    onChange={handleStatusDropdownChange}
+                    className="status-select"
+                  >
+                    <option value="DRAFT">Draft</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="LISTED">Listed</option>
+                    <option value="SOLD">Sold</option>
+                  </select>
+                </div>
 
-            {item.listing_price && (
-              <div className="info-row">
-                <span className="label">Listing Price:</span>
-                <span>£{parseFloat(item.listing_price).toFixed(2)}</span>
-              </div>
-            )}
+                {item.purchase_cost && (
+                  <div className="info-row">
+                    <span className="label">Purchase Price:</span>
+                    <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
+                  </div>
+                )}
 
-            {item.sold_price && (
-              <div className="info-row">
-                <span className="label">Sold Price:</span>
-                <span>£{parseFloat(item.sold_price).toFixed(2)}</span>
-              </div>
-            )}
+                {item.listing_price && (
+                  <div className="info-row">
+                    <span className="label">Listing Price:</span>
+                    <span>£{parseFloat(item.listing_price).toFixed(2)}</span>
+                  </div>
+                )}
 
-            {item.box_number && (
-              <div className="info-row">
-                <span className="label">Storage:</span>
-                <span>Box {item.box_number}</span>
-              </div>
-            )}
+                {item.sold_price && (
+                  <div className="info-row">
+                    <span className="label">Sold Price:</span>
+                    <span>£{parseFloat(item.sold_price).toFixed(2)}</span>
+                  </div>
+                )}
 
-            <button className="btn-edit" onClick={() => onEditClick(item)}>
-              ✏️ Edit
-            </button>
-            <button
-              className="btn-delete"
-              onClick={() => onDeleteItem(item.id, `${item.brand} ${item.category}`)}
-            >
-              🗑️ Delete Item
-            </button>
+                {item.box_number && (
+                  <div className="info-row">
+                    <span className="label">Storage:</span>
+                    <span>Box {item.box_number}</span>
+                  </div>
+                )}
+
+                <button className="btn-edit" onClick={() => onEditClick(item)}>
+                  ✏️ Edit
+                </button>
+                <button
+                  className="btn-delete"
+                  onClick={() => onDeleteItem(item.id, `${item.brand} ${item.category}`)}
+                >
+                  🗑️ Delete Item
+                </button>
+              </>
+            )}
           </div>
         </>
       )}

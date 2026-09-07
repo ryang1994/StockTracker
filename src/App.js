@@ -13,6 +13,7 @@ function App() {
   const [editingItemId, setEditingItemId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   const [statsRefresh, setStatsRefresh] = useState(0);
+
   useEffect(() => {
     fetchItems();
   }, []);
@@ -44,9 +45,31 @@ function App() {
       setItems(items.map(item =>
         item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
       ));
+      setStatsRefresh(prev => prev + 1);
     } catch (err) {
       console.error(err);
       alert('Failed to update status.');
+    }
+  };
+
+  const handleConfirmSale = async (itemId, soldPrice) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/sell`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sold_price: soldPrice })
+      });
+
+      if (!response.ok) throw new Error('Failed to mark as sold');
+
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+      setStatsRefresh(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to mark item as sold.');
     }
   };
 
@@ -62,6 +85,7 @@ function App() {
       if (!response.ok) throw new Error('Failed to delete item');
 
       setItems(items.filter(item => item.id !== itemId));
+      setStatsRefresh(prev => prev + 1);
     } catch (err) {
       console.error(err);
       alert('Failed to delete item.');
@@ -108,6 +132,7 @@ function App() {
 
       setEditingItemId(null);
       setEditFormData({});
+      setStatsRefresh(prev => prev + 1);
     } catch (err) {
       console.error(err);
       alert('Failed to save changes.');
@@ -125,7 +150,7 @@ function App() {
         <p>AI-Assisted Reselling Inventory System</p>
       </header>
 
-            <main className="app-main">
+      <main className="app-main">
         <DashboardStats refreshTrigger={statsRefresh} />
 
         <PhotoAnalysisFlow
@@ -158,6 +183,7 @@ function App() {
                   onCancelEdit={handleCancelEdit}
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
+                  onConfirmSale={handleConfirmSale}
                 />
               ))}
             </div>
