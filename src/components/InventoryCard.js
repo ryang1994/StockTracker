@@ -33,6 +33,20 @@ function InventoryCard({
     }
   };
 
+  const getCardStatusClass = (status) => {
+    switch (status) {
+      case 'ACTIVE':
+      case 'LISTED':
+        return 'selling';
+      case 'SOLD':
+        return 'sold';
+      case 'DRAFT':
+        return 'draft';
+      default:
+        return 'draft';
+    }
+  };
+
   const getStatusBadgeText = (status) => {
     switch (status) {
       case 'ACTIVE': return 'SELLING';
@@ -76,7 +90,7 @@ function InventoryCard({
     : null;
 
   return (
-    <div className={`inventory-card ${item.needs_attention ? 'needs-attention' : ''}`}>
+    <div className={`inventory-card status-${getCardStatusClass(item.status)} ${item.needs_attention ? 'needs-attention' : ''}`}>
       <div className="card-badges">
         {item.needs_attention && (
           <span className="badge badge-attention">⚠️ ATTENTION</span>

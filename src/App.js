@@ -3,10 +3,14 @@ import './App.css';
 import InventoryCard from './components/InventoryCard';
 import PhotoAnalysisFlow from './components/PhotoAnalysisFlow';
 import DashboardStats from './components/DashboardStats';
+import NavBar from './components/NavBar';
+import ComingSoon from './components/ComingSoon';
+import SearchBar from './components/SearchBar';
 
 const API_URL = 'http://localhost:5000/api';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('dashboard');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState({});
@@ -14,6 +18,7 @@ function App() {
   const [editFormData, setEditFormData] = useState({});
   const [statsRefresh, setStatsRefresh] = useState(0);
   const [filterStatus, setFilterStatus] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchItems();
@@ -145,18 +150,37 @@ function App() {
   };
 
   const getFilteredItems = () => {
+    let result = items;
+
     switch (filterStatus) {
       case 'SELLING':
-        return items.filter(item => item.status === 'ACTIVE' || item.status === 'LISTED');
+        result = result.filter(item => item.status === 'ACTIVE' || item.status === 'LISTED');
+        break;
       case 'DRAFT':
-        return items.filter(item => item.status === 'DRAFT');
+        result = result.filter(item => item.status === 'DRAFT');
+        break;
       case 'SOLD':
-        return items.filter(item => item.status === 'SOLD');
+        result = result.filter(item => item.status === 'SOLD');
+        break;
       case 'ATTENTION':
-        return items.filter(item => item.needs_attention);
+        result = result.filter(item => item.needs_attention);
+        break;
       default:
-        return items;
+        break;
     }
+
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(item =>
+        (item.brand && item.brand.toLowerCase().includes(term)) ||
+        (item.category && item.category.toLowerCase().includes(term)) ||
+        (item.size && item.size.toLowerCase().includes(term)) ||
+        (item.colour && item.colour.toLowerCase().includes(term)) ||
+        (item.condition && item.condition.toLowerCase().includes(term))
+      );
+    }
+
+    return result;
   };
 
   const filteredItems = getFilteredItems();
@@ -169,14 +193,51 @@ function App() {
     ATTENTION: items.filter(i => i.needs_attention).length
   };
 
-  return (
-    <div className="App">
-      <header className="app-header">
-        <h1>📦 Stock Tracker</h1>
-        <p>AI-Assisted Reselling Inventory System</p>
-      </header>
+  const renderPage = () => {
+    if (currentPage === 'database') {
+      return (
+        <ComingSoon
+          title="Database"
+          icon="🗄️"
+          roadmap={[
+            'Full sales history with purchase batches',
+            'Monthly profit reports for tax records',
+            'Supplier performance tracking'
+          ]}
+        />
+      );
+    }
 
-      <main className="app-main">
+    if (currentPage === 'analytics') {
+      return (
+        <ComingSoon
+          title="Analytics"
+          icon="📊"
+          roadmap={[
+            'Sell-through rate by brand and category',
+            'Best and worst performing stock types',
+            'Buying recommendations based on your history'
+          ]}
+        />
+      );
+    }
+
+    if (currentPage === 'settings') {
+      return (
+        <ComingSoon
+          title="Settings"
+          icon="⚙️"
+          roadmap={[
+            'Manage storage boxes',
+            'eBay and Vinted account connections',
+            'Backup and export options'
+          ]}
+        />
+      );
+    }
+
+    return (
+      <>
         <DashboardStats refreshTrigger={statsRefresh} />
 
         <PhotoAnalysisFlow
@@ -188,6 +249,8 @@ function App() {
 
         <section className="inventory-section">
           <h2>Inventory ({filteredItems.length})</h2>
+
+          <SearchBar value={searchTerm} onChange={setSearchTerm} />
 
           <div className="filter-tabs">
             <button
@@ -248,6 +311,15 @@ function App() {
             </div>
           )}
         </section>
+      </>
+    );
+  };
+
+  return (
+    <div className="App">
+      <NavBar currentPage={currentPage} onNavigate={setCurrentPage} />
+      <main className="app-main">
+        {renderPage()}
       </main>
     </div>
   );
