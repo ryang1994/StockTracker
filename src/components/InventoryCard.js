@@ -99,6 +99,14 @@ function InventoryCard({
             placeholder="Purchase Price (£)"
             step="0.01"
           />
+          <input
+            type="number"
+            name="listing_price"
+            value={editFormData.listing_price}
+            onChange={onEditInputChange}
+            placeholder="Listing Price (£)"
+            step="0.01"
+          />
           <select
             name="box_number"
             value={editFormData.box_number}
@@ -152,6 +160,20 @@ function InventoryCard({
               <div className="info-row">
                 <span className="label">Purchase Price:</span>
                 <span>£{parseFloat(item.purchase_cost).toFixed(2)}</span>
+              </div>
+            )}
+
+            {item.listing_price && (
+              <div className="info-row">
+                <span className="label">Listing Price:</span>
+                <span>£{parseFloat(item.listing_price).toFixed(2)}</span>
+              </div>
+            )}
+
+            {item.sold_price && (
+              <div className="info-row">
+                <span className="label">Sold Price:</span>
+                <span>£{parseFloat(item.sold_price).toFixed(2)}</span>
               </div>
             )}
 

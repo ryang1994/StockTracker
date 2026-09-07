@@ -76,6 +76,7 @@ function App() {
       size: item.size || '',
       condition: item.condition || '',
       purchase_cost: item.purchase_cost || '',
+      listing_price: item.listing_price || '',
       box_number: item.box_number || ''
     });
   };

@@ -37,12 +37,12 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         condition: result.condition || '',
         visible_defects: result.visible_defects || '',
         purchase_cost: '',
+        listing_price: '',
         box_number: ''
       });
       setStep('review');
     } catch (err) {
       console.error(err);
-      // AI analysis failed entirely - drop into a blank review form so photos aren't lost
       setReviewData({
         brand: '',
         category: '',
@@ -53,6 +53,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         condition: '',
         visible_defects: '',
         purchase_cost: '',
+        listing_price: '',
         box_number: ''
       });
       setStep('review');
@@ -83,6 +84,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         size: reviewData.size,
         condition: reviewData.condition,
         purchase_cost: reviewData.purchase_cost,
+        listing_price: reviewData.listing_price,
         status: 'DRAFT',
         box_number: reviewData.box_number
       };
@@ -230,6 +232,17 @@ function PhotoAnalysisFlow({ onItemSaved }) {
                 value={reviewData.purchase_cost}
                 onChange={handleReviewInputChange}
                 step="0.01"
+              />
+            </div>
+            <div className="form-group">
+              <label>Listing Price (£)</label>
+              <input
+                type="number"
+                name="listing_price"
+                value={reviewData.listing_price}
+                onChange={handleReviewInputChange}
+                step="0.01"
+                placeholder="Your asking price"
               />
             </div>
             <div className="form-group">
