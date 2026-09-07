@@ -1,26 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import AddItemForm from './components/AddItemForm';
 import InventoryCard from './components/InventoryCard';
 import PhotoAnalysisFlow from './components/PhotoAnalysisFlow';
+
 const API_URL = 'http://localhost:5000/api';
 
 function App() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [activeImageIndex, setActiveImageIndex] = useState({});
   const [editingItemId, setEditingItemId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
-  const [formData, setFormData] = useState({
-    brand: '',
-    category: '',
-    size: '',
-    condition: '',
-    purchase_cost: '',
-    status: 'DRAFT',
-    box_number: ''
-  });
 
   useEffect(() => {
     fetchItems();
@@ -36,73 +26,6 @@ function App() {
       alert('Could not connect to the backend. Make sure the server is running.');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handlePhotoSelect = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedPhotos(files);
-  };
-
-  const handleAddItem = async (e) => {
-    e.preventDefault();
-    if (!formData.brand || !formData.category) {
-      alert('Please fill in brand and category');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/items`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) throw new Error('Failed to add item');
-
-      const newItem = await response.json();
-
-      if (selectedPhotos.length > 0) {
-        const photoFormData = new FormData();
-        selectedPhotos.forEach(file => {
-          photoFormData.append('photos', file);
-        });
-
-        const uploadResponse = await fetch(`${API_URL}/items/${newItem.id}/images`, {
-          method: 'POST',
-          body: photoFormData
-        });
-
-        if (!uploadResponse.ok) throw new Error('Failed to upload photos');
-
-        const uploadedImages = await uploadResponse.json();
-        newItem.images = uploadedImages;
-      } else {
-        newItem.images = [];
-      }
-
-      setItems([newItem, ...items]);
-
-      setFormData({
-        brand: '',
-        category: '',
-        size: '',
-        condition: '',
-        purchase_cost: '',
-        status: 'DRAFT',
-        box_number: ''
-      });
-      setSelectedPhotos([]);
-      document.getElementById('photo-input').value = '';
-
-    } catch (err) {
-      console.error(err);
-      alert('Failed to add item. Check the backend is running.');
     }
   };
 
@@ -200,17 +123,9 @@ function App() {
         <p>AI-Assisted Reselling Inventory System</p>
       </header>
 
-            <main className="app-main">
+      <main className="app-main">
         <PhotoAnalysisFlow
           onItemSaved={(newItem) => setItems([newItem, ...items])}
-        />
-
-        <AddItemForm
-          formData={formData}
-          onInputChange={handleInputChange}
-          onPhotoSelect={handlePhotoSelect}
-          selectedPhotos={selectedPhotos}
-          onSubmit={handleAddItem}
         />
 
         <section className="inventory-section">

@@ -42,9 +42,20 @@ function PhotoAnalysisFlow({ onItemSaved }) {
       setStep('review');
     } catch (err) {
       console.error(err);
-      alert('AI analysis failed. Please try again, or add the item manually.');
-      setStep('idle');
-      setSelectedPhotos([]);
+      // AI analysis failed entirely - drop into a blank review form so photos aren't lost
+      setReviewData({
+        brand: '',
+        category: '',
+        department: '',
+        size: '',
+        colour: '',
+        material: '',
+        condition: '',
+        visible_defects: '',
+        purchase_cost: '',
+        box_number: ''
+      });
+      setStep('review');
     }
   };
 
