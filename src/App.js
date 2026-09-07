@@ -79,6 +79,25 @@ function App() {
     }
   };
 
+  const handleMarkDispatched = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/dispatch`, {
+        method: 'PATCH'
+      });
+
+      if (!response.ok) throw new Error('Failed to mark as dispatched');
+
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+      setStatsRefresh(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to mark item as dispatched.');
+    }
+  };
+
   const handleDeleteItem = async (itemId, itemName) => {
     const confirmed = window.confirm(`Are you sure you want to delete "${itemName}"? This cannot be undone.`);
     if (!confirmed) return;
@@ -107,6 +126,7 @@ function App() {
       condition: item.condition || '',
       purchase_cost: item.purchase_cost || '',
       listing_price: item.listing_price || '',
+      listing_url: item.listing_url || '',
       box_number: item.box_number || ''
     });
   };
@@ -149,8 +169,11 @@ function App() {
     setActiveImageIndex({ ...activeImageIndex, [itemId]: index });
   };
 
+  // Main dashboard never shows DISPATCHED items - they live in the Dispatch tab
+  const dashboardItems = items.filter(item => item.status !== 'DISPATCHED');
+
   const getFilteredItems = () => {
-    let result = items;
+    let result = dashboardItems;
 
     switch (filterStatus) {
       case 'SELLING':
@@ -158,9 +181,6 @@ function App() {
         break;
       case 'DRAFT':
         result = result.filter(item => item.status === 'DRAFT');
-        break;
-      case 'SOLD':
-        result = result.filter(item => item.status === 'SOLD');
         break;
       case 'ATTENTION':
         result = result.filter(item => item.needs_attention);
@@ -185,12 +205,15 @@ function App() {
 
   const filteredItems = getFilteredItems();
 
+  const awaitingDispatch = items.filter(item => item.status === 'SOLD');
+  const recentlyDispatched = items.filter(item => item.status === 'DISPATCHED');
+
   const counts = {
-    ALL: items.length,
-    SELLING: items.filter(i => i.status === 'ACTIVE' || i.status === 'LISTED').length,
-    DRAFT: items.filter(i => i.status === 'DRAFT').length,
-    SOLD: items.filter(i => i.status === 'SOLD').length,
-    ATTENTION: items.filter(i => i.needs_attention).length
+    ALL: dashboardItems.length,
+    SELLING: dashboardItems.filter(i => i.status === 'ACTIVE' || i.status === 'LISTED').length,
+    DRAFT: dashboardItems.filter(i => i.status === 'DRAFT').length,
+    ATTENTION: dashboardItems.filter(i => i.needs_attention).length,
+    DISPATCH: awaitingDispatch.length
   };
 
   const renderPage = () => {
@@ -200,7 +223,7 @@ function App() {
           title="Database"
           icon="🗄️"
           roadmap={[
-            'Full sales history with purchase batches',
+            'Archive of dispatched & completed sales',
             'Monthly profit reports for tax records',
             'Supplier performance tracking'
           ]}
@@ -233,6 +256,66 @@ function App() {
             'Backup and export options'
           ]}
         />
+      );
+    }
+
+    if (currentPage === 'dispatch') {
+      return (
+        <section className="inventory-section">
+          <h2>Dispatch</h2>
+
+          <h3 className="dispatch-section-title">📦 Awaiting Dispatch ({awaitingDispatch.length})</h3>
+          {awaitingDispatch.length === 0 ? (
+            <p className="no-items">Nothing waiting to be dispatched.</p>
+          ) : (
+            <div className="inventory-list">
+              {awaitingDispatch.map(item => (
+                <InventoryCard
+                  key={item.id}
+                  item={item}
+                  isEditing={editingItemId === item.id}
+                  editFormData={editFormData}
+                  activeImageIndex={activeImageIndex[item.id]}
+                  onThumbnailClick={handleThumbnailClick}
+                  onStatusChange={handleStatusChange}
+                  onEditClick={handleEditClick}
+                  onEditInputChange={handleEditInputChange}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onDeleteItem={handleDeleteItem}
+                  onConfirmSale={handleConfirmSale}
+                  onMarkDispatched={handleMarkDispatched}
+                />
+              ))}
+            </div>
+          )}
+
+          <h3 className="dispatch-section-title">✅ Recently Dispatched ({recentlyDispatched.length})</h3>
+          {recentlyDispatched.length === 0 ? (
+            <p className="no-items">No recently dispatched items.</p>
+          ) : (
+            <div className="inventory-list">
+              {recentlyDispatched.map(item => (
+                <InventoryCard
+                  key={item.id}
+                  item={item}
+                  isEditing={editingItemId === item.id}
+                  editFormData={editFormData}
+                  activeImageIndex={activeImageIndex[item.id]}
+                  onThumbnailClick={handleThumbnailClick}
+                  onStatusChange={handleStatusChange}
+                  onEditClick={handleEditClick}
+                  onEditInputChange={handleEditInputChange}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onDeleteItem={handleDeleteItem}
+                  onConfirmSale={handleConfirmSale}
+                  onMarkDispatched={handleMarkDispatched}
+                />
+              ))}
+            </div>
+          )}
+        </section>
       );
     }
 
@@ -272,16 +355,16 @@ function App() {
               Draft ({counts.DRAFT})
             </button>
             <button
-              className={`filter-tab ${filterStatus === 'SOLD' ? 'active' : ''}`}
-              onClick={() => setFilterStatus('SOLD')}
-            >
-              Sold ({counts.SOLD})
-            </button>
-            <button
               className={`filter-tab ${filterStatus === 'ATTENTION' ? 'active' : ''}`}
               onClick={() => setFilterStatus('ATTENTION')}
             >
               ⚠️ Attention ({counts.ATTENTION})
+            </button>
+            <button
+              className="filter-tab"
+              onClick={() => setCurrentPage('dispatch')}
+            >
+              📦 Dispatch ({counts.DISPATCH})
             </button>
           </div>
 
@@ -306,6 +389,7 @@ function App() {
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
+                  onMarkDispatched={handleMarkDispatched}
                 />
               ))}
             </div>

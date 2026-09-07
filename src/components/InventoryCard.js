@@ -14,7 +14,8 @@ function InventoryCard({
   onCancelEdit,
   onSaveEdit,
   onDeleteItem,
-  onConfirmSale
+  onConfirmSale,
+  onMarkDispatched
 }) {
   const [askingSoldPrice, setAskingSoldPrice] = useState(false);
   const [soldPriceInput, setSoldPriceInput] = useState('');
@@ -25,9 +26,9 @@ function InventoryCard({
       case 'LISTED':
         return 'green';
       case 'SOLD':
-        return 'red';
-      case 'DRAFT':
         return 'amber';
+      case 'DISPATCHED':
+        return 'blue';
       default:
         return 'gray';
     }
@@ -40,6 +41,8 @@ function InventoryCard({
         return 'selling';
       case 'SOLD':
         return 'sold';
+      case 'DISPATCHED':
+        return 'dispatched';
       case 'DRAFT':
         return 'draft';
       default:
@@ -51,7 +54,8 @@ function InventoryCard({
     switch (status) {
       case 'ACTIVE': return 'SELLING';
       case 'LISTED': return 'SELLING';
-      case 'SOLD': return 'SOLD';
+      case 'SOLD': return 'AWAITING DISPATCH';
+      case 'DISPATCHED': return 'DISPATCHED';
       case 'DRAFT': return 'DRAFT';
       default: return status;
     }
@@ -85,9 +89,11 @@ function InventoryCard({
     setSoldPriceInput('');
   };
 
-  const profit = item.status === 'SOLD' && item.sold_price != null && item.purchase_cost != null
+  const profit = (item.status === 'SOLD' || item.status === 'DISPATCHED') && item.sold_price != null && item.purchase_cost != null
     ? (parseFloat(item.sold_price) - parseFloat(item.purchase_cost))
     : null;
+
+  const daysRemaining = item.days_since_dispatch != null ? Math.max(0, 14 - item.days_since_dispatch) : null;
 
   return (
     <div className={`inventory-card status-${getCardStatusClass(item.status)} ${item.needs_attention ? 'needs-attention' : ''}`}>
@@ -96,8 +102,11 @@ function InventoryCard({
           <span className="badge badge-attention">⚠️ ATTENTION</span>
         )}
         <span className="badge badge-status">{getStatusBadgeText(item.status)}</span>
-        {item.days_held != null && item.status !== 'SOLD' && (
+        {item.days_held != null && item.status === 'DRAFT' && (
           <span className="badge badge-days">{item.days_held} days</span>
+        )}
+        {item.status === 'DISPATCHED' && daysRemaining != null && (
+          <span className="badge badge-days">{daysRemaining}d until archived</span>
         )}
       </div>
 
@@ -174,6 +183,13 @@ function InventoryCard({
             placeholder="Listing Price (£)"
             step="0.01"
           />
+          <input
+            type="text"
+            name="listing_url"
+            value={editFormData.listing_url}
+            onChange={onEditInputChange}
+            placeholder="Listing URL (eBay/Vinted link)"
+          />
           <select
             name="box_number"
             value={editFormData.box_number}
@@ -230,19 +246,21 @@ function InventoryCard({
               </div>
             ) : (
               <>
-                <div className="info-row">
-                  <span className="label">Status:</span>
-                  <select
-                    value={item.status}
-                    onChange={handleStatusDropdownChange}
-                    className="status-select"
-                  >
-                    <option value="DRAFT">Draft</option>
-                    <option value="ACTIVE">Active</option>
-                    <option value="LISTED">Listed</option>
-                    <option value="SOLD">Sold</option>
-                  </select>
-                </div>
+                {item.status !== 'DISPATCHED' && (
+                  <div className="info-row">
+                    <span className="label">Status:</span>
+                    <select
+                      value={item.status}
+                      onChange={handleStatusDropdownChange}
+                      className="status-select"
+                    >
+                      <option value="DRAFT">Draft</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="LISTED">Listed</option>
+                      <option value="SOLD">Sold</option>
+                    </select>
+                  </div>
+                )}
 
                 {item.purchase_cost && (
                   <div className="info-row">
@@ -288,9 +306,26 @@ function InventoryCard({
                   </div>
                 )}
 
-                <button className="btn-edit" onClick={() => onEditClick(item)}>
-                  ✏️ Edit
-                </button>
+                {item.listing_url && (
+                  <div className="info-row">
+                    <span className="label">Listing:</span>
+                    <a href={item.listing_url} target="_blank" rel="noopener noreferrer" className="listing-link">
+                      View listing ↗
+                    </a>
+                  </div>
+                )}
+
+                {item.status === 'SOLD' && (
+                  <button className="btn-dispatch" onClick={() => onMarkDispatched(item.id)}>
+                    📦 Mark Dispatched
+                  </button>
+                )}
+
+                {item.status !== 'DISPATCHED' && (
+                  <button className="btn-edit" onClick={() => onEditClick(item)}>
+                    ✏️ Edit
+                  </button>
+                )}
                 <button
                   className="btn-delete"
                   onClick={() => onDeleteItem(item.id, `${item.brand} ${item.category}`)}

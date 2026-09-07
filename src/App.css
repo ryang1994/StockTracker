@@ -770,3 +770,53 @@ body {
     align-items: flex-start;
   }
 }
+.status-light.blue {
+  background-color: #3b82f6;
+}
+
+.inventory-card.status-dispatched {
+  background: linear-gradient(160deg, #142033 0%, #101c2e 100%);
+  border-color: #1e3a5f;
+}
+
+.btn-dispatch {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-dispatch:hover {
+  background: #2563eb;
+}
+
+.listing-link {
+  color: #6f93ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.listing-link:hover {
+  text-decoration: underline;
+}
+
+.dispatch-section-title {
+  color: #8b93b8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 1.5rem 0 0.75rem;
+}
+
+.dispatch-section-title:first-child {
+  margin-top: 0;
+}
