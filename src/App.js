@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import InventoryCard from './components/InventoryCard';
 import PhotoAnalysisFlow from './components/PhotoAnalysisFlow';
+import DashboardStats from './components/DashboardStats';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -11,7 +12,7 @@ function App() {
   const [activeImageIndex, setActiveImageIndex] = useState({});
   const [editingItemId, setEditingItemId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
-
+  const [statsRefresh, setStatsRefresh] = useState(0);
   useEffect(() => {
     fetchItems();
   }, []);
@@ -123,9 +124,14 @@ function App() {
         <p>AI-Assisted Reselling Inventory System</p>
       </header>
 
-      <main className="app-main">
+            <main className="app-main">
+        <DashboardStats refreshTrigger={statsRefresh} />
+
         <PhotoAnalysisFlow
-          onItemSaved={(newItem) => setItems([newItem, ...items])}
+          onItemSaved={(newItem) => {
+            setItems([newItem, ...items]);
+            setStatsRefresh(prev => prev + 1);
+          }}
         />
 
         <section className="inventory-section">
