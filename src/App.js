@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import AddItemForm from './components/AddItemForm';
 import InventoryCard from './components/InventoryCard';
-
+import PhotoAnalysisFlow from './components/PhotoAnalysisFlow';
 const API_URL = 'http://localhost:5000/api';
 
 function App() {
@@ -200,7 +200,11 @@ function App() {
         <p>AI-Assisted Reselling Inventory System</p>
       </header>
 
-      <main className="app-main">
+            <main className="app-main">
+        <PhotoAnalysisFlow
+          onItemSaved={(newItem) => setItems([newItem, ...items])}
+        />
+
         <AddItemForm
           formData={formData}
           onInputChange={handleInputChange}
