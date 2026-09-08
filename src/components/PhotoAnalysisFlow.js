@@ -1,16 +1,82 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const MAX_PHOTOS = 6;
 
 function PhotoAnalysisFlow({ onItemSaved }) {
-  // idle -> selecting -> analyzing -> review
+  // idle -> camera -> selecting -> analyzing -> review
   const [step, setStep] = useState('idle');
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
   const [reviewData, setReviewData] = useState({});
+  const [cameraError, setCameraError] = useState(null);
+
   const fileInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Attach the live camera stream to the <video> element once it's mounted
+  useEffect(() => {
+    if (step === 'camera' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [step]);
+
+  // Release the camera if the component ever unmounts while it's open
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      });
+      streamRef.current = stream;
+      setStep('camera');
+    } catch (err) {
+      console.error('Camera access failed:', err);
+      setCameraError('Could not access the camera. You can choose photos from your gallery instead.');
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video || selectedPhotos.length >= MAX_PHOTOS) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const url = URL.createObjectURL(blob);
+
+      setSelectedPhotos(prev => [...prev, file].slice(0, MAX_PHOTOS));
+      setPhotoPreviewUrls(prev => [...prev, url].slice(0, MAX_PHOTOS));
+    }, 'image/jpeg', 0.92);
+  };
+
+  const finishCapturing = () => {
+    stopCamera();
+    setStep('selecting');
+  };
 
   const openFilePicker = () => {
     if (fileInputRef.current) {
@@ -18,9 +84,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
     }
   };
 
-  // Fires every time photos are added, whether from "Add Photos" (idle)
-  // or "Add More" (selecting step). Appends to whatever is already selected
-  // instead of replacing it, so multiple camera shots / gallery picks build up.
+  // Fires when photos are picked from the gallery (from idle or from "Add More")
   const handleFilesAdded = (e) => {
     const newFiles = Array.from(e.target.files);
     e.target.value = ''; // allow picking the same file again later if needed
@@ -52,19 +116,20 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   };
 
   const resetAll = () => {
+    stopCamera();
     photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
     setStep('idle');
     setSelectedPhotos([]);
     setPhotoPreviewUrls([]);
     setMainPhotoIndex(0);
     setReviewData({});
+    setCameraError(null);
   };
 
   const handleCancel = () => {
     resetAll();
   };
 
-  // Triggered by the "Continue" button in the selecting step
   const runAnalysis = async () => {
     if (selectedPhotos.length === 0) return;
     setStep('analyzing');
@@ -192,10 +257,68 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   return (
     <section className="photo-analysis-section">
       {step === 'idle' && (
-        <div className="photo-drop-zone" onClick={openFilePicker} role="button" tabIndex={0}>
-          <span className="photo-drop-icon">📷</span>
-          <span className="photo-drop-title">Click here to add photos</span>
-          <span className="photo-drop-subtitle">Take photos or choose from your gallery — add as many as you need, then continue</span>
+        <div className="photo-entry-panel">
+          <button type="button" className="photo-drop-zone" onClick={startCamera}>
+            <span className="photo-drop-icon">📷</span>
+            <span className="photo-drop-title">Take Photos</span>
+            <span className="photo-drop-subtitle">Capture 2–5 photos directly — nothing is saved to your phone's gallery</span>
+          </button>
+
+          {cameraError && <p className="camera-error">{cameraError}</p>}
+
+          <button type="button" className="btn-cancel photo-gallery-fallback" onClick={openFilePicker}>
+            🖼️ Or choose from gallery instead
+          </button>
+        </div>
+      )}
+
+      {step === 'camera' && (
+        <div className="camera-panel">
+          <div className="camera-preview-wrapper">
+            <video ref={videoRef} autoPlay playsInline muted className="camera-preview" />
+          </div>
+
+          <button
+            type="button"
+            className="camera-shutter-btn"
+            onClick={capturePhoto}
+            disabled={selectedPhotos.length >= MAX_PHOTOS}
+            aria-label="Take photo"
+          >
+            📸
+          </button>
+
+          <p className="camera-count-label">{selectedPhotos.length}/{MAX_PHOTOS} photos captured</p>
+
+          {photoPreviewUrls.length > 0 && (
+            <div className="photo-selecting-grid">
+              {photoPreviewUrls.map((url, idx) => (
+                <div key={idx} className="photo-selecting-item">
+                  <img src={url} alt={`Captured ${idx + 1}`} />
+                  <button
+                    type="button"
+                    className="photo-remove-btn"
+                    onClick={() => handleRemovePhoto(idx)}
+                    aria-label="Remove photo"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="review-buttons">
+            <button type="button" className="btn-cancel" onClick={handleCancel}>Cancel</button>
+            <button
+              type="button"
+              className="btn-add"
+              onClick={finishCapturing}
+              disabled={selectedPhotos.length === 0}
+            >
+              ✅ Done ({selectedPhotos.length})
+            </button>
+          </div>
         </div>
       )}
 
@@ -220,12 +343,20 @@ function PhotoAnalysisFlow({ onItemSaved }) {
             ))}
           </div>
 
-          <div className="review-buttons">
-            {selectedPhotos.length < MAX_PHOTOS && (
-              <button type="button" className="btn-cancel" onClick={openFilePicker}>
-                ➕ Add More
+          {selectedPhotos.length < MAX_PHOTOS && (
+            <div className="review-buttons photo-add-more-row">
+              <button type="button" className="btn-cancel" onClick={startCamera}>
+                📷 Add via Camera
               </button>
-            )}
+              <button type="button" className="btn-cancel" onClick={openFilePicker}>
+                🖼️ Add from Gallery
+              </button>
+            </div>
+          )}
+
+          {cameraError && <p className="camera-error">{cameraError}</p>}
+
+          <div className="review-buttons">
             <button
               type="button"
               className="btn-add"
