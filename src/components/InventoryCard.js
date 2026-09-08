@@ -16,7 +16,8 @@ function InventoryCard({
   onSaveEdit,
   onDeleteItem,
   onConfirmSale,
-  onMarkDispatched
+  onMarkDispatched,
+  onOpenFolder
 }) {
   const [askingSoldPrice, setAskingSoldPrice] = useState(false);
   const [soldPriceInput, setSoldPriceInput] = useState('');
@@ -300,10 +301,15 @@ function InventoryCard({
                     <CopyField label="Description" value={item.generated_description} />
                   </div>
                 )}
-
                 {item.status === 'SOLD' && (
                   <button className="btn-dispatch" onClick={() => onMarkDispatched(item.id)}>
                     📦 Mark Dispatched
+                  </button>
+                )}
+
+                {item.images && item.images.length > 0 && (
+                  <button className="btn-folder" onClick={() => onOpenFolder(item.id)}>
+                    📁 Open Photo Folder
                   </button>
                 )}
 

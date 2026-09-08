@@ -97,7 +97,17 @@ function App() {
       alert('Failed to mark item as dispatched.');
     }
   };
-
+  const handleOpenFolder = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/open-folder`, {
+        method: 'POST'
+      });
+      if (!response.ok) throw new Error('Failed to open folder');
+    } catch (err) {
+      console.error(err);
+      alert('Could not open the folder. Make sure you are running the app on the same PC as the backend.');
+    }
+  };
   const handleDeleteItem = async (itemId, itemName) => {
     const confirmed = window.confirm(`Are you sure you want to delete "${itemName}"? This cannot be undone.`);
     if (!confirmed) return;
@@ -285,6 +295,7 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+
                 />
               ))}
             </div>
@@ -311,6 +322,7 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+                  onOpenFolder={handleOpenFolder}
                 />
               ))}
             </div>
@@ -390,6 +402,7 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+                  onOpenFolder={handleOpenFolder}
                 />
               ))}
             </div>
