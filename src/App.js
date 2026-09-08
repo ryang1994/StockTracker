@@ -224,7 +224,7 @@ function App() {
     SELLING: dashboardItems.filter(i => i.status === 'ACTIVE' || i.status === 'LISTED').length,
     DRAFT: dashboardItems.filter(i => i.status === 'DRAFT').length,
     ATTENTION: dashboardItems.filter(i => i.needs_attention).length,
-    DISPATCH: awaitingDispatch.length
+    DISPATCH: awaitingDispatch.length + recentlyDispatched.length
   };
 
   const renderPage = () => {
