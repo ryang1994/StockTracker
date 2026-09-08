@@ -3,8 +3,10 @@ import React, { useState } from 'react';
 const API_URL = 'http://localhost:5000/api';
 
 function PhotoAnalysisFlow({ onItemSaved }) {
-  const [step, setStep] = useState('idle'); // idle | analyzing | review
+  const [step, setStep] = useState('idle');
   const [selectedPhotos, setSelectedPhotos] = useState([]);
+  const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
+  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
   const [reviewData, setReviewData] = useState({});
 
   const handlePhotoSelect = async (e) => {
@@ -12,6 +14,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
     if (files.length === 0) return;
 
     setSelectedPhotos(files);
+    setPhotoPreviewUrls(files.map(f => URL.createObjectURL(f)));
+    setMainPhotoIndex(0);
     setStep('analyzing');
 
     try {
@@ -34,6 +38,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         size: result.size || '',
         colour: result.colour || '',
         material: result.material || '',
+        outer_shell_material: result.outer_shell_material || '',
+        style: result.style || '',
         condition: result.condition || '',
         visible_defects: result.visible_defects || '',
         purchase_cost: '',
@@ -50,6 +56,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         size: '',
         colour: '',
         material: '',
+        outer_shell_material: '',
+        style: '',
         condition: '',
         visible_defects: '',
         purchase_cost: '',
@@ -68,6 +76,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   const handleCancel = () => {
     setStep('idle');
     setSelectedPhotos([]);
+    setPhotoPreviewUrls([]);
+    setMainPhotoIndex(0);
     setReviewData({});
   };
 
@@ -82,7 +92,12 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         brand: reviewData.brand,
         category: reviewData.category,
         size: reviewData.size,
+        colour: reviewData.colour,
         condition: reviewData.condition,
+        material: reviewData.material,
+        outer_shell_material: reviewData.outer_shell_material,
+        style: reviewData.style,
+        department: reviewData.department,
         purchase_cost: reviewData.purchase_cost,
         listing_price: reviewData.listing_price,
         status: 'DRAFT',
@@ -100,8 +115,14 @@ function PhotoAnalysisFlow({ onItemSaved }) {
       const newItem = await response.json();
 
       if (selectedPhotos.length > 0) {
+        // Reorder so the chosen main photo uploads first
+        const orderedPhotos = [
+          selectedPhotos[mainPhotoIndex],
+          ...selectedPhotos.filter((_, i) => i !== mainPhotoIndex)
+        ];
+
         const photoFormData = new FormData();
-        selectedPhotos.forEach(file => photoFormData.append('photos', file));
+        orderedPhotos.forEach(file => photoFormData.append('photos', file));
 
         const uploadResponse = await fetch(`${API_URL}/items/${newItem.id}/images`, {
           method: 'POST',
@@ -155,68 +176,59 @@ function PhotoAnalysisFlow({ onItemSaved }) {
           <h3>Review AI Suggestions</h3>
           <p className="review-hint">Check and correct anything before saving.</p>
 
+          {photoPreviewUrls.length > 0 && (
+            <div className="photo-select-strip">
+              <p className="photo-select-label">Choose main photo:</p>
+              <div className="photo-select-row">
+                {photoPreviewUrls.map((url, idx) => (
+                  <img
+                    key={idx}
+                    src={url}
+                    alt={`option ${idx + 1}`}
+                    className={`photo-select-thumb ${mainPhotoIndex === idx ? 'selected' : ''}`}
+                    onClick={() => setMainPhotoIndex(idx)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="review-grid">
             <div className="form-group">
               <label>Brand</label>
-              <input
-                type="text"
-                name="brand"
-                value={reviewData.brand}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="brand" value={reviewData.brand} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Category</label>
-              <input
-                type="text"
-                name="category"
-                value={reviewData.category}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="category" value={reviewData.category} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Department</label>
-              <input
-                type="text"
-                name="department"
-                value={reviewData.department}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="department" value={reviewData.department} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Size</label>
-              <input
-                type="text"
-                name="size"
-                value={reviewData.size}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="size" value={reviewData.size} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Colour</label>
-              <input
-                type="text"
-                name="colour"
-                value={reviewData.colour}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="colour" value={reviewData.colour} onChange={handleReviewInputChange} />
+            </div>
+            <div className="form-group">
+              <label>Style</label>
+              <input type="text" name="style" value={reviewData.style} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Material</label>
-              <input
-                type="text"
-                name="material"
-                value={reviewData.material}
-                onChange={handleReviewInputChange}
-              />
+              <input type="text" name="material" value={reviewData.material} onChange={handleReviewInputChange} />
+            </div>
+            <div className="form-group">
+              <label>Outer Shell Material</label>
+              <input type="text" name="outer_shell_material" value={reviewData.outer_shell_material} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
               <label>Condition</label>
-              <select
-                name="condition"
-                value={reviewData.condition}
-                onChange={handleReviewInputChange}
-              >
+              <select name="condition" value={reviewData.condition} onChange={handleReviewInputChange}>
                 <option value="">Select condition</option>
                 <option value="Like New">Like New</option>
                 <option value="Very Good">Very Good</option>
@@ -226,32 +238,15 @@ function PhotoAnalysisFlow({ onItemSaved }) {
             </div>
             <div className="form-group">
               <label>Purchase Price (£)</label>
-              <input
-                type="number"
-                name="purchase_cost"
-                value={reviewData.purchase_cost}
-                onChange={handleReviewInputChange}
-                step="0.01"
-              />
+              <input type="number" name="purchase_cost" value={reviewData.purchase_cost} onChange={handleReviewInputChange} step="0.01" />
             </div>
             <div className="form-group">
               <label>Listing Price (£)</label>
-              <input
-                type="number"
-                name="listing_price"
-                value={reviewData.listing_price}
-                onChange={handleReviewInputChange}
-                step="0.01"
-                placeholder="Your asking price"
-              />
+              <input type="number" name="listing_price" value={reviewData.listing_price} onChange={handleReviewInputChange} step="0.01" placeholder="Your asking price" />
             </div>
             <div className="form-group">
               <label>Storage Box</label>
-              <select
-                name="box_number"
-                value={reviewData.box_number}
-                onChange={handleReviewInputChange}
-              >
+              <select name="box_number" value={reviewData.box_number} onChange={handleReviewInputChange}>
                 <option value="">Select box</option>
                 <option value="1">Box 1</option>
                 <option value="2">Box 2</option>
@@ -271,12 +266,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
           )}
 
           <div className="review-buttons">
-            <button className="btn-add" onClick={handleConfirmSave}>
-              Save Item
-            </button>
-            <button className="btn-cancel" onClick={handleCancel}>
-              Cancel
-            </button>
+            <button className="btn-add" onClick={handleConfirmSave}>Save Item</button>
+            <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
           </div>
         </div>
       )}

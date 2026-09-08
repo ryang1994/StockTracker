@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CopyField from './CopyField';
 
 const SERVER_URL = 'http://localhost:5000';
 
@@ -23,8 +24,9 @@ function InventoryCard({
   const getStatusColor = (status) => {
     switch (status) {
       case 'ACTIVE':
-      case 'LISTED':
         return 'green';
+      case 'LISTED':
+        return 'purple';
       case 'SOLD':
         return 'amber';
       case 'DISPATCHED':
@@ -37,8 +39,9 @@ function InventoryCard({
   const getCardStatusClass = (status) => {
     switch (status) {
       case 'ACTIVE':
-      case 'LISTED':
         return 'selling';
+      case 'LISTED':
+        return 'listing';
       case 'SOLD':
         return 'sold';
       case 'DISPATCHED':
@@ -52,8 +55,8 @@ function InventoryCard({
 
   const getStatusBadgeText = (status) => {
     switch (status) {
-      case 'ACTIVE': return 'SELLING';
-      case 'LISTED': return 'SELLING';
+      case 'ACTIVE': return 'ACTIVE';
+      case 'LISTED': return 'LISTING';
       case 'SOLD': return 'AWAITING DISPATCH';
       case 'DISPATCHED': return 'DISPATCHED';
       case 'DRAFT': return 'DRAFT';
@@ -95,6 +98,9 @@ function InventoryCard({
 
   const daysRemaining = item.days_since_dispatch != null ? Math.max(0, 14 - item.days_since_dispatch) : null;
 
+  const showListingTools = item.status === 'LISTED';
+  const showSimpleActiveView = item.status === 'ACTIVE';
+
   return (
     <div className={`inventory-card status-${getCardStatusClass(item.status)} ${item.needs_attention ? 'needs-attention' : ''}`}>
       <div className="card-badges">
@@ -102,7 +108,7 @@ function InventoryCard({
           <span className="badge badge-attention">⚠️ ATTENTION</span>
         )}
         <span className="badge badge-status">{getStatusBadgeText(item.status)}</span>
-        {item.days_held != null && item.status === 'DRAFT' && (
+               {item.days_held != null && (item.status === 'DRAFT' || item.status === 'ACTIVE' || item.status === 'LISTED') && (
           <span className="badge badge-days">{item.days_held} days</span>
         )}
         {item.status === 'DISPATCHED' && daysRemaining != null && (
@@ -135,66 +141,20 @@ function InventoryCard({
 
       {isEditing ? (
         <div className="edit-form">
-          <input
-            type="text"
-            name="brand"
-            value={editFormData.brand}
-            onChange={onEditInputChange}
-            placeholder="Brand"
-          />
-          <input
-            type="text"
-            name="category"
-            value={editFormData.category}
-            onChange={onEditInputChange}
-            placeholder="Category"
-          />
-          <input
-            type="text"
-            name="size"
-            value={editFormData.size}
-            onChange={onEditInputChange}
-            placeholder="Size"
-          />
-          <select
-            name="condition"
-            value={editFormData.condition}
-            onChange={onEditInputChange}
-          >
+          <input type="text" name="brand" value={editFormData.brand} onChange={onEditInputChange} placeholder="Brand" />
+          <input type="text" name="category" value={editFormData.category} onChange={onEditInputChange} placeholder="Category" />
+          <input type="text" name="size" value={editFormData.size} onChange={onEditInputChange} placeholder="Size" />
+          <select name="condition" value={editFormData.condition} onChange={onEditInputChange}>
             <option value="">Select condition</option>
             <option value="Like New">Like New</option>
             <option value="Very Good">Very Good</option>
             <option value="Good">Good</option>
             <option value="Fair">Fair</option>
           </select>
-          <input
-            type="number"
-            name="purchase_cost"
-            value={editFormData.purchase_cost}
-            onChange={onEditInputChange}
-            placeholder="Purchase Price (£)"
-            step="0.01"
-          />
-          <input
-            type="number"
-            name="listing_price"
-            value={editFormData.listing_price}
-            onChange={onEditInputChange}
-            placeholder="Listing Price (£)"
-            step="0.01"
-          />
-          <input
-            type="text"
-            name="listing_url"
-            value={editFormData.listing_url}
-            onChange={onEditInputChange}
-            placeholder="Listing URL (eBay/Vinted link)"
-          />
-          <select
-            name="box_number"
-            value={editFormData.box_number}
-            onChange={onEditInputChange}
-          >
+          <input type="number" name="purchase_cost" value={editFormData.purchase_cost} onChange={onEditInputChange} placeholder="Purchase Price (£)" step="0.01" />
+          <input type="number" name="listing_price" value={editFormData.listing_price} onChange={onEditInputChange} placeholder="Listing Price (£)" step="0.01" />
+          <input type="text" name="listing_url" value={editFormData.listing_url} onChange={onEditInputChange} placeholder="Listing URL (eBay/Vinted link)" />
+          <select name="box_number" value={editFormData.box_number} onChange={onEditInputChange}>
             <option value="">Select box</option>
             <option value="1">Box 1</option>
             <option value="2">Box 2</option>
@@ -206,12 +166,8 @@ function InventoryCard({
           </select>
 
           <div className="edit-buttons">
-            <button className="btn-save" onClick={() => onSaveEdit(item.id)}>
-              Save
-            </button>
-            <button className="btn-cancel" onClick={onCancelEdit}>
-              Cancel
-            </button>
+            <button className="btn-save" onClick={() => onSaveEdit(item.id)}>Save</button>
+            <button className="btn-cancel" onClick={onCancelEdit}>Cancel</button>
           </div>
         </div>
       ) : (
@@ -236,12 +192,8 @@ function InventoryCard({
                   autoFocus
                 />
                 <div className="edit-buttons">
-                  <button className="btn-save" onClick={handleConfirmSoldPrice}>
-                    Confirm Sale
-                  </button>
-                  <button className="btn-cancel" onClick={handleCancelSoldPrice}>
-                    Cancel
-                  </button>
+                  <button className="btn-save" onClick={handleConfirmSoldPrice}>Confirm Sale</button>
+                  <button className="btn-cancel" onClick={handleCancelSoldPrice}>Cancel</button>
                 </div>
               </div>
             ) : (
@@ -249,17 +201,36 @@ function InventoryCard({
                 {item.status !== 'DISPATCHED' && (
                   <div className="info-row">
                     <span className="label">Status:</span>
-                    <select
-                      value={item.status}
-                      onChange={handleStatusDropdownChange}
-                      className="status-select"
-                    >
+                    <select value={item.status} onChange={handleStatusDropdownChange} className="status-select">
                       <option value="DRAFT">Draft</option>
+                      <option value="LISTED">Listing</option>
                       <option value="ACTIVE">Active</option>
-                      <option value="LISTED">Listed</option>
                       <option value="SOLD">Sold</option>
                     </select>
                   </div>
+                )}
+
+                {showSimpleActiveView && (
+                  <>
+                    {item.brand && (
+                      <div className="info-row">
+                        <span className="label">Brand:</span>
+                        <span>{item.brand}</span>
+                      </div>
+                    )}
+                    {item.department && (
+                      <div className="info-row">
+                        <span className="label">Department:</span>
+                        <span>{item.department}</span>
+                      </div>
+                    )}
+                    {item.size && (
+                      <div className="info-row">
+                        <span className="label">Size:</span>
+                        <span>{item.size}</span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {item.purchase_cost && (
@@ -315,6 +286,21 @@ function InventoryCard({
                   </div>
                 )}
 
+                {showListingTools && (
+                  <div className="listing-tools">
+                    <div className="listing-tools-title">📋 Copy for Listing</div>
+                    <CopyField label="Brand" value={item.brand} />
+                    <CopyField label="Size" value={item.size} />
+                    <CopyField label="Type" value={item.category} />
+                    <CopyField label="Outer Shell Material" value={item.outer_shell_material || item.material} />
+                    <CopyField label="Style" value={item.style} />
+                    <CopyField label="Colour" value={item.colour} />
+                    <CopyField label="Department" value={item.department} />
+                    <CopyField label="Listing Price" value={item.listing_price ? `£${parseFloat(item.listing_price).toFixed(2)}` : null} />
+                    <CopyField label="Description" value={item.generated_description} />
+                  </div>
+                )}
+
                 {item.status === 'SOLD' && (
                   <button className="btn-dispatch" onClick={() => onMarkDispatched(item.id)}>
                     📦 Mark Dispatched
@@ -322,14 +308,9 @@ function InventoryCard({
                 )}
 
                 {item.status !== 'DISPATCHED' && (
-                  <button className="btn-edit" onClick={() => onEditClick(item)}>
-                    ✏️ Edit
-                  </button>
+                  <button className="btn-edit" onClick={() => onEditClick(item)}>✏️ Edit</button>
                 )}
-                <button
-                  className="btn-delete"
-                  onClick={() => onDeleteItem(item.id, `${item.brand} ${item.category}`)}
-                >
+                <button className="btn-delete" onClick={() => onDeleteItem(item.id, `${item.brand} ${item.category}`)}>
                   🗑️ Delete Item
                 </button>
               </>
