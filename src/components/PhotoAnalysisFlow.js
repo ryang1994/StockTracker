@@ -1,26 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const MAX_PHOTOS = 6;
 
 function PhotoAnalysisFlow({ onItemSaved }) {
+  // idle -> selecting -> analyzing -> review
   const [step, setStep] = useState('idle');
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [photoPreviewUrls, setPhotoPreviewUrls] = useState([]);
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
   const [reviewData, setReviewData] = useState({});
+  const fileInputRef = useRef(null);
 
-  const handlePhotoSelect = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
-    setSelectedPhotos(files);
-    setPhotoPreviewUrls(files.map(f => URL.createObjectURL(f)));
+  // Fires every time photos are added, whether from "Add Photos" (idle)
+  // or "Add More" (selecting step). Appends to whatever is already selected
+  // instead of replacing it, so multiple camera shots / gallery picks build up.
+  const handleFilesAdded = (e) => {
+    const newFiles = Array.from(e.target.files);
+    e.target.value = ''; // allow picking the same file again later if needed
+    if (newFiles.length === 0) return;
+
+    setSelectedPhotos(prevPhotos => {
+      const combined = [...prevPhotos, ...newFiles];
+      if (combined.length > MAX_PHOTOS) {
+        alert(`You can add up to ${MAX_PHOTOS} photos per item. Only the first ${MAX_PHOTOS} will be kept.`);
+      }
+      return combined.slice(0, MAX_PHOTOS);
+    });
+
+    setPhotoPreviewUrls(prevUrls => {
+      const newUrls = newFiles.map(f => URL.createObjectURL(f));
+      return [...prevUrls, ...newUrls].slice(0, MAX_PHOTOS);
+    });
+
+    setStep('selecting');
+  };
+
+  const handleRemovePhoto = (index) => {
+    setPhotoPreviewUrls(prevUrls => {
+      URL.revokeObjectURL(prevUrls[index]);
+      return prevUrls.filter((_, i) => i !== index);
+    });
+    setSelectedPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
     setMainPhotoIndex(0);
+  };
+
+  const resetAll = () => {
+    photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    setStep('idle');
+    setSelectedPhotos([]);
+    setPhotoPreviewUrls([]);
+    setMainPhotoIndex(0);
+    setReviewData({});
+  };
+
+  const handleCancel = () => {
+    resetAll();
+  };
+
+  // Triggered by the "Continue" button in the selecting step
+  const runAnalysis = async () => {
+    if (selectedPhotos.length === 0) return;
     setStep('analyzing');
 
     try {
       const formData = new FormData();
-      files.forEach(file => formData.append('photos', file));
+      selectedPhotos.forEach(file => formData.append('photos', file));
 
       const response = await fetch(`${API_URL}/analyze-photos`, {
         method: 'POST',
@@ -71,14 +122,6 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   const handleReviewInputChange = (e) => {
     const { name, value } = e.target;
     setReviewData({ ...reviewData, [name]: value });
-  };
-
-  const handleCancel = () => {
-    setStep('idle');
-    setSelectedPhotos([]);
-    setPhotoPreviewUrls([]);
-    setMainPhotoIndex(0);
-    setReviewData({});
   };
 
   const handleConfirmSave = async () => {
@@ -139,7 +182,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
       }
 
       onItemSaved(newItem);
-      handleCancel();
+      resetAll();
     } catch (err) {
       console.error(err);
       alert('Failed to save item.');
@@ -149,19 +192,54 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   return (
     <section className="photo-analysis-section">
       {step === 'idle' && (
-        <label className="photo-drop-zone">
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            capture="environment"
-            onChange={handlePhotoSelect}
-            style={{ display: 'none' }}
-          />
+        <div className="photo-drop-zone" onClick={openFilePicker} role="button" tabIndex={0}>
           <span className="photo-drop-icon">📷</span>
           <span className="photo-drop-title">Click here to add photos</span>
-          <span className="photo-drop-subtitle">Take or upload photos and let AI do the rest</span>
-        </label>
+          <span className="photo-drop-subtitle">Take photos or choose from your gallery — add as many as you need, then continue</span>
+        </div>
+      )}
+
+      {step === 'selecting' && (
+        <div className="photo-selecting-panel">
+          <h3>Photos ({selectedPhotos.length}/{MAX_PHOTOS})</h3>
+          <p className="review-hint">Add front, back, label — whatever you need. Tap Continue when ready.</p>
+
+          <div className="photo-selecting-grid">
+            {photoPreviewUrls.map((url, idx) => (
+              <div key={idx} className="photo-selecting-item">
+                <img src={url} alt={`Selected ${idx + 1}`} />
+                <button
+                  type="button"
+                  className="photo-remove-btn"
+                  onClick={() => handleRemovePhoto(idx)}
+                  aria-label="Remove photo"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="review-buttons">
+            {selectedPhotos.length < MAX_PHOTOS && (
+              <button type="button" className="btn-cancel" onClick={openFilePicker}>
+                ➕ Add More
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn-add"
+              onClick={runAnalysis}
+              disabled={selectedPhotos.length === 0}
+            >
+              ▶ Continue ({selectedPhotos.length})
+            </button>
+          </div>
+
+          <button type="button" className="btn-cancel photo-selecting-cancel" onClick={handleCancel}>
+            Cancel
+          </button>
+        </div>
       )}
 
       {step === 'analyzing' && (
@@ -271,6 +349,15 @@ function PhotoAnalysisFlow({ onItemSaved }) {
           </div>
         </div>
       )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFilesAdded}
+        style={{ display: 'none' }}
+      />
     </section>
   );
 }
