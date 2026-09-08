@@ -940,3 +940,42 @@ body {
   background: rgba(45, 91, 255, 0.2);
   color: #6f93ff;
 }
+.archive-table-wrapper {
+  background: #1a2040;
+  border-radius: 12px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+.archive-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.archive-table th {
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  color: #8b93b8;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #2a3155;
+}
+
+.archive-table td {
+  padding: 0.7rem 0.8rem;
+  color: white;
+  border-bottom: 1px solid #21273f;
+}
+
+.archive-table tr:last-child td {
+  border-bottom: none;
+}
+
+.archive-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}

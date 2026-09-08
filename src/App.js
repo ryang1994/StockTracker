@@ -6,6 +6,7 @@ import DashboardStats from './components/DashboardStats';
 import NavBar from './components/NavBar';
 import ComingSoon from './components/ComingSoon';
 import SearchBar from './components/SearchBar';
+import DatabasePage from './components/DatabasePage';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -228,17 +229,7 @@ function App() {
 
   const renderPage = () => {
     if (currentPage === 'database') {
-      return (
-        <ComingSoon
-          title="Database"
-          icon="🗄️"
-          roadmap={[
-            'Archive of dispatched & completed sales',
-            'Monthly profit reports for tax records',
-            'Supplier performance tracking'
-          ]}
-        />
-      );
+      return <DatabasePage />;
     }
 
     if (currentPage === 'analytics') {
