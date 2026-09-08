@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import CopyField from './CopyField';
 
-const SERVER_URL = 'http://localhost:5000';
+const SERVER_URL = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api', '') : 'http://localhost:5000';
 
 function InventoryCard({
   item,

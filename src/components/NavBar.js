@@ -9,9 +9,10 @@ function NavBar({ currentPage, onNavigate }) {
     return () => clearInterval(interval);
   }, []);
 
-  const checkBackend = async () => {
+const checkBackend = async () => {
     try {
-      const response = await fetch('http://localhost:5000/');
+      const baseUrl = process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api', '') : 'http://localhost:5000';
+      const response = await fetch(`${baseUrl}/`);
       setBackendOnline(response.ok);
     } catch {
       setBackendOnline(false);
