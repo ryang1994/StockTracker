@@ -352,6 +352,251 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* Bookkeeping page */
+.bookkeeping-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tax-year-select {
+  background: #1a2040;
+  color: white;
+  border: 1px solid #2a3155;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.tax-summary-table {
+  background: #1a2040;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.tax-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  color: #d0d4e8;
+}
+
+.tax-summary-row .label {
+  color: #8b93b8;
+}
+
+.tax-summary-total {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: white;
+  border-top: 1px solid #2a3155;
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+}
+
+.tax-summary-divider {
+  height: 1px;
+  background: #2a3155;
+  margin: 0.75rem 0;
+}
+
+.tax-summary-banner {
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.tax-banner-good {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.tax-banner-warning {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.tax-disclaimer {
+  font-size: 0.75rem;
+  color: #6b7299;
+  margin-top: 1rem;
+  line-height: 1.4;
+}
+
+.bookkeeping-settings-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.bookkeeping-subsection {
+  margin-bottom: 2rem;
+}
+
+.bookkeeping-subsection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.bookkeeping-subsection-header h3 {
+  color: white;
+  margin: 0;
+}
+
+.bookkeeping-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.bookkeeping-card {
+  background: #1a2040;
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.bookkeeping-card-main {
+  color: #d0d4e8;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.bookkeeping-card-meta {
+  color: #8b93b8;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.bookkeeping-card-notes {
+  color: #6b7299;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+.bookkeeping-delete-btn {
+  flex: 0 0 auto;
+  width: auto;
+  align-self: flex-start;
+  padding: 0.4rem 0.6rem;
+  margin: 0;
+}
+
+.receipt-upload-label {
+  color: #4f78ff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.receipt-upload-label:hover {
+  color: #6d90ff;
+}
+
+.default-cost-row {
+  background: #1a2040;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.default-cost-row label {
+  color: #8b93b8;
+  font-size: 0.9rem;
+}
+
+.default-cost-row input {
+  width: 100px;
+  background: #0f1226;
+  border: 1px solid #2a3155;
+  border-radius: 6px;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  text-align: right;
+}
+
+.quantity-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #8b93b8;
+  margin-top: 0.3rem;
+}
+
+.deadline-banner {
+  background: rgba(79, 120, 255, 0.12);
+  border: 1px solid rgba(79, 120, 255, 0.3);
+  color: #a8b8ff;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.tax-savings-card {
+  background: linear-gradient(135deg, #1a2040, #202850);
+  border: 1px solid #3548a0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.tax-savings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 0.75rem;
+}
+
+.bookkeeping-small-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.tax-savings-row {
+  display: flex;
+  justify-content: space-between;
+  color: #d0d4e8;
+  padding: 0.3rem 0;
+}
+
+.set-aside-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.set-aside-form input {
+  flex: 1;
+}
+
+.bookkeeping-action-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.bookkeeping-action-row button {
+  flex: 1;
+}
+
 .btn-add:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -585,6 +830,19 @@ body {
 .badge-attention {
   background: rgba(239, 68, 68, 0.2);
   color: #f87171;
+}
+
+.badge-item-number {
+  background: rgba(255, 255, 255, 0.06);
+  color: #8b93b8;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.archive-item-number {
+  font-family: monospace;
+  color: #8b93b8;
+  font-size: 0.85rem;
 }
 
 .card-image {

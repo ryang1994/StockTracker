@@ -69,6 +69,7 @@ function DatabasePage() {
           <thead>
             <tr>
               <th></th>
+              <th>Item #</th>
               <th>Brand / Category</th>
               <th>Size</th>
               <th>Purchase</th>
@@ -90,6 +91,7 @@ function DatabasePage() {
                     />
                   )}
                 </td>
+                <td className="archive-item-number">{item.item_number}</td>
                 <td>{item.brand} {item.category}</td>
                 <td>{item.size || '-'}</td>
                 <td>{item.purchase_cost ? `£${parseFloat(item.purchase_cost).toFixed(2)}` : '-'}</td>

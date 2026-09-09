@@ -7,6 +7,7 @@ import NavBar from './components/NavBar';
 import ComingSoon from './components/ComingSoon';
 import SearchBar from './components/SearchBar';
 import DatabasePage from './components/DatabasePage';
+import BookkeepingPage from './components/BookkeepingPage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -59,12 +60,12 @@ function App() {
     }
   };
 
-  const handleConfirmSale = async (itemId, soldPrice) => {
+  const handleConfirmSale = async (itemId, soldPrice, sellingFees) => {
     try {
       const response = await fetch(`${API_URL}/items/${itemId}/sell`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sold_price: soldPrice })
+        body: JSON.stringify({ sold_price: soldPrice, selling_fees: sellingFees })
       });
 
       if (!response.ok) throw new Error('Failed to mark as sold');
@@ -98,6 +99,28 @@ function App() {
       alert('Failed to mark item as dispatched.');
     }
   };
+  const handleUploadPurchaseReceipt = async (itemId, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('receipt', file);
+
+      const response = await fetch(`${API_URL}/items/${itemId}/purchase-receipt`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Failed to upload receipt');
+
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to upload purchase receipt.');
+    }
+  };
+
   const handleOpenFolder = async (itemId) => {
     try {
       const response = await fetch(`${API_URL}/items/${itemId}/open-folder`, {
@@ -232,6 +255,10 @@ function App() {
       return <DatabasePage />;
     }
 
+    if (currentPage === 'bookkeeping') {
+      return <BookkeepingPage />;
+    }
+
     if (currentPage === 'analytics') {
       return (
         <ComingSoon
@@ -286,7 +313,7 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
-
+                  onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
               ))}
             </div>
@@ -314,6 +341,7 @@ function App() {
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
                   onOpenFolder={handleOpenFolder}
+                  onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
               ))}
             </div>
@@ -327,8 +355,8 @@ function App() {
         <DashboardStats refreshTrigger={statsRefresh} />
 
         <PhotoAnalysisFlow
-          onItemSaved={(newItem) => {
-            setItems([newItem, ...items]);
+          onItemSaved={(newItems) => {
+            setItems([...newItems, ...items]);
             setStatsRefresh(prev => prev + 1);
           }}
         />
@@ -394,6 +422,7 @@ function App() {
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
                   onOpenFolder={handleOpenFolder}
+                  onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
               ))}
             </div>

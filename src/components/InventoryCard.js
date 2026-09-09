@@ -17,10 +17,20 @@ function InventoryCard({
   onDeleteItem,
   onConfirmSale,
   onMarkDispatched,
-  onOpenFolder
+  onOpenFolder,
+  onUploadPurchaseReceipt
 }) {
   const [askingSoldPrice, setAskingSoldPrice] = useState(false);
   const [soldPriceInput, setSoldPriceInput] = useState('');
+  const [sellingFeesInput, setSellingFeesInput] = useState('');
+
+  const handleReceiptFileSelected = (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (file) {
+      onUploadPurchaseReceipt(item.id, file);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -84,17 +94,19 @@ function InventoryCard({
       alert('Please enter a valid price.');
       return;
     }
-    onConfirmSale(item.id, price);
+    const fees = parseFloat(sellingFeesInput) || 0;
+    onConfirmSale(item.id, price, fees);
     setAskingSoldPrice(false);
   };
 
   const handleCancelSoldPrice = () => {
     setAskingSoldPrice(false);
     setSoldPriceInput('');
+    setSellingFeesInput('');
   };
 
   const profit = (item.status === 'SOLD' || item.status === 'DISPATCHED') && item.sold_price != null && item.purchase_cost != null
-    ? (parseFloat(item.sold_price) - parseFloat(item.purchase_cost))
+    ? (parseFloat(item.sold_price) - parseFloat(item.purchase_cost) - parseFloat(item.selling_fees || 0))
     : null;
 
   const daysRemaining = item.days_since_dispatch != null ? Math.max(0, 14 - item.days_since_dispatch) : null;
@@ -105,6 +117,9 @@ function InventoryCard({
   return (
     <div className={`inventory-card status-${getCardStatusClass(item.status)} ${item.needs_attention ? 'needs-attention' : ''}`}>
       <div className="card-badges">
+        {item.item_number && (
+          <span className="badge badge-item-number">{item.item_number}</span>
+        )}
         {item.needs_attention && (
           <span className="badge badge-attention">⚠️ ATTENTION</span>
         )}
@@ -192,6 +207,14 @@ function InventoryCard({
                   step="0.01"
                   autoFocus
                 />
+                <label>Marketplace fees (£, optional)</label>
+                <input
+                  type="number"
+                  value={sellingFeesInput}
+                  onChange={(e) => setSellingFeesInput(e.target.value)}
+                  step="0.01"
+                  placeholder="0.00"
+                />
                 <div className="edit-buttons">
                   <button className="btn-save" onClick={handleConfirmSoldPrice}>Confirm Sale</button>
                   <button className="btn-cancel" onClick={handleCancelSoldPrice}>Cancel</button>
@@ -241,6 +264,20 @@ function InventoryCard({
                   </div>
                 )}
 
+                <div className="info-row purchase-receipt-row">
+                  <span className="label">Purchase Receipt:</span>
+                  {item.purchase_receipt_key ? (
+                    <a href={`${SERVER_URL}/${item.purchase_receipt_key}`} target="_blank" rel="noopener noreferrer" className="listing-link">
+                      View receipt ↗
+                    </a>
+                  ) : (
+                    <label className="receipt-upload-label">
+                      📄 Add receipt
+                      <input type="file" accept="image/*" onChange={handleReceiptFileSelected} style={{ display: 'none' }} />
+                    </label>
+                  )}
+                </div>
+
                 {item.listing_price && (
                   <div className="info-row">
                     <span className="label">Listing Price:</span>
@@ -252,6 +289,13 @@ function InventoryCard({
                   <div className="info-row">
                     <span className="label">Sold Price:</span>
                     <span>£{parseFloat(item.sold_price).toFixed(2)}</span>
+                  </div>
+                )}
+
+                {item.selling_fees > 0 && (
+                  <div className="info-row">
+                    <span className="label">Marketplace Fees:</span>
+                    <span>£{parseFloat(item.selling_fees).toFixed(2)}</span>
                   </div>
                 )}
 

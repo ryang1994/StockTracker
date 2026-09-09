@@ -11,6 +11,16 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
   const [reviewData, setReviewData] = useState({});
   const [cameraError, setCameraError] = useState(null);
+  const [defaultPurchaseCost, setDefaultPurchaseCost] = useState(
+    () => localStorage.getItem('stocktracker_default_purchase_cost') || ''
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleDefaultCostChange = (e) => {
+    const value = e.target.value;
+    setDefaultPurchaseCost(value);
+    localStorage.setItem('stocktracker_default_purchase_cost', value);
+  };
 
   const fileInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -124,6 +134,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
     setMainPhotoIndex(0);
     setReviewData({});
     setCameraError(null);
+    setIsSaving(false);
   };
 
   const handleCancel = () => {
@@ -158,9 +169,10 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         style: result.style || '',
         condition: result.condition || '',
         visible_defects: result.visible_defects || '',
-        purchase_cost: '',
+        purchase_cost: defaultPurchaseCost,
         listing_price: '',
-        box_number: ''
+        box_number: '',
+        quantity: '1'
       });
       setStep('review');
     } catch (err) {
@@ -176,9 +188,10 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         style: '',
         condition: '',
         visible_defects: '',
-        purchase_cost: '',
+        purchase_cost: defaultPurchaseCost,
         listing_price: '',
-        box_number: ''
+        box_number: '',
+        quantity: '1'
       });
       setStep('review');
     }
@@ -190,10 +203,14 @@ function PhotoAnalysisFlow({ onItemSaved }) {
   };
 
   const handleConfirmSave = async () => {
+    if (isSaving) return; // already in progress - ignore extra taps
+
     if (!reviewData.brand && !reviewData.category) {
       alert('Please fill in at least a brand or category before saving.');
       return;
     }
+
+    setIsSaving(true);
 
     try {
       const itemPayload = {
@@ -209,7 +226,8 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         purchase_cost: reviewData.purchase_cost,
         listing_price: reviewData.listing_price,
         status: 'DRAFT',
-        box_number: reviewData.box_number
+        box_number: reviewData.box_number,
+        quantity: reviewData.quantity || 1
       };
 
       const response = await fetch(`${API_URL}/items`, {
@@ -220,7 +238,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
 
       if (!response.ok) throw new Error('Failed to create item');
 
-      const newItem = await response.json();
+      const newItems = await response.json(); // always an array, even for quantity 1
 
       if (selectedPhotos.length > 0) {
         // Reorder so the chosen main photo uploads first
@@ -229,28 +247,32 @@ function PhotoAnalysisFlow({ onItemSaved }) {
           ...selectedPhotos.filter((_, i) => i !== mainPhotoIndex)
         ];
 
-        const photoFormData = new FormData();
-        orderedPhotos.forEach(file => photoFormData.append('photos', file));
+        // Duplicates from the same batch share identical photos - upload to each in turn
+        for (const newItem of newItems) {
+          const photoFormData = new FormData();
+          orderedPhotos.forEach(file => photoFormData.append('photos', file));
 
-        const uploadResponse = await fetch(`${API_URL}/items/${newItem.id}/images`, {
-          method: 'POST',
-          body: photoFormData
-        });
+          const uploadResponse = await fetch(`${API_URL}/items/${newItem.id}/images`, {
+            method: 'POST',
+            body: photoFormData
+          });
 
-        if (uploadResponse.ok) {
-          newItem.images = await uploadResponse.json();
-        } else {
-          newItem.images = [];
+          if (uploadResponse.ok) {
+            newItem.images = await uploadResponse.json();
+          } else {
+            newItem.images = [];
+          }
         }
       } else {
-        newItem.images = [];
+        newItems.forEach(item => { item.images = []; });
       }
 
-      onItemSaved(newItem);
+      onItemSaved(newItems);
       resetAll();
     } catch (err) {
       console.error(err);
       alert('Failed to save item.');
+      setIsSaving(false);
     }
   };
 
@@ -258,6 +280,17 @@ function PhotoAnalysisFlow({ onItemSaved }) {
     <section className="photo-analysis-section">
       {step === 'idle' && (
         <div className="photo-entry-panel">
+          <div className="default-cost-row">
+            <label>Default cost per item (£)</label>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="e.g. £6"
+              value={defaultPurchaseCost}
+              onChange={handleDefaultCostChange}
+            />
+          </div>
+
           <button type="button" className="photo-drop-zone" onClick={startCamera}>
             <span className="photo-drop-icon">📷</span>
             <span className="photo-drop-title">Take Photos</span>
@@ -450,6 +483,13 @@ function PhotoAnalysisFlow({ onItemSaved }) {
               <input type="number" name="purchase_cost" value={reviewData.purchase_cost} onChange={handleReviewInputChange} step="0.01" />
             </div>
             <div className="form-group">
+              <label>Quantity</label>
+              <input type="number" name="quantity" value={reviewData.quantity} onChange={handleReviewInputChange} min="1" step="1" />
+              {parseInt(reviewData.quantity, 10) > 1 && (
+                <span className="quantity-hint">Creates {reviewData.quantity} separate item cards, each with its own status</span>
+              )}
+            </div>
+            <div className="form-group">
               <label>Listing Price (£)</label>
               <input type="number" name="listing_price" value={reviewData.listing_price} onChange={handleReviewInputChange} step="0.01" placeholder="Your asking price" />
             </div>
@@ -475,7 +515,9 @@ function PhotoAnalysisFlow({ onItemSaved }) {
           )}
 
           <div className="review-buttons">
-            <button className="btn-add" onClick={handleConfirmSave}>Save Item</button>
+            <button className="btn-add" onClick={handleConfirmSave} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Item'}
+            </button>
             <button className="btn-cancel" onClick={handleCancel}>Cancel</button>
           </div>
         </div>
