@@ -486,12 +486,14 @@ body {
   font-style: italic;
 }
 
-.bookkeeping-delete-btn {
+.bookkeeping-card .bookkeeping-delete-btn {
   flex: 0 0 auto;
   width: auto;
+  min-width: unset;
   align-self: flex-start;
   padding: 0.4rem 0.6rem;
   margin: 0;
+  white-space: nowrap;
 }
 
 .receipt-upload-label {
@@ -535,6 +537,109 @@ body {
   font-size: 0.75rem;
   color: #8b93b8;
   margin-top: 0.3rem;
+}
+
+/* Settings page */
+.settings-card {
+  background: #1a2040;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.settings-card h3 {
+  color: white;
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.placeholder-tag {
+  display: inline-block;
+  background: rgba(139, 147, 184, 0.2);
+  color: #8b93b8;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0;
+  color: #d0d4e8;
+}
+
+.settings-inline-btn {
+  margin-left: auto;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  width: auto;
+}
+
+.box-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.box-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #0f1226;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.box-row-name {
+  flex: 2;
+  color: #d0d4e8;
+}
+
+.box-row input {
+  flex: 2;
+  background: #1a2040;
+  border: 1px solid #2a3155;
+  border-radius: 6px;
+  color: white;
+  padding: 0.3rem 0.5rem;
+}
+
+.box-row .settings-inline-btn {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: unset;
+  white-space: nowrap;
+}
+
+.box-add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.box-add-row input {
+  flex: 1;
+  background: #0f1226;
+  border: 1px solid #2a3155;
+  border-radius: 6px;
+  color: white;
+  padding: 0.5rem 0.75rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #d0d4e8;
+  font-size: 0.9rem;
+  margin: 0.75rem 0;
+  cursor: pointer;
 }
 
 .deadline-banner {
@@ -1199,6 +1304,63 @@ body {
 
 .btn-dispatch:hover {
   background: #2563eb;
+}
+
+.btn-return {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  background: #f59e0b;
+  color: #1a1200;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-return:hover {
+  background: #d97706;
+}
+
+.badge-return-requested {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.btn-flag-return {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  background: transparent;
+  color: #f87171;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-flag-return:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.btn-cancel-flag {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: transparent;
+  color: #8b93b8;
+  border: 1px solid #2a3155;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.btn-cancel-flag:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .listing-link {

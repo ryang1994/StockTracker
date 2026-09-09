@@ -17,12 +17,17 @@ function InventoryCard({
   onDeleteItem,
   onConfirmSale,
   onMarkDispatched,
+  onReturnItem,
+  onFlagReturn,
+  onUnflagReturn,
   onOpenFolder,
-  onUploadPurchaseReceipt
+  onUploadPurchaseReceipt,
+  boxes
 }) {
   const [askingSoldPrice, setAskingSoldPrice] = useState(false);
   const [soldPriceInput, setSoldPriceInput] = useState('');
   const [sellingFeesInput, setSellingFeesInput] = useState('');
+  const [soldPlatformInput, setSoldPlatformInput] = useState('');
 
   const handleReceiptFileSelected = (e) => {
     const file = e.target.files[0];
@@ -95,7 +100,7 @@ function InventoryCard({
       return;
     }
     const fees = parseFloat(sellingFeesInput) || 0;
-    onConfirmSale(item.id, price, fees);
+    onConfirmSale(item.id, price, fees, soldPlatformInput || null);
     setAskingSoldPrice(false);
   };
 
@@ -103,13 +108,14 @@ function InventoryCard({
     setAskingSoldPrice(false);
     setSoldPriceInput('');
     setSellingFeesInput('');
+    setSoldPlatformInput('');
   };
 
   const profit = (item.status === 'SOLD' || item.status === 'DISPATCHED') && item.sold_price != null && item.purchase_cost != null
     ? (parseFloat(item.sold_price) - parseFloat(item.purchase_cost) - parseFloat(item.selling_fees || 0))
     : null;
 
-  const daysRemaining = item.days_since_dispatch != null ? Math.max(0, 14 - item.days_since_dispatch) : null;
+  const daysRemaining = item.days_until_archived != null ? item.days_until_archived : null;
 
   const showListingTools = item.status === 'LISTED';
   const showSimpleActiveView = item.status === 'ACTIVE';
@@ -122,6 +128,9 @@ function InventoryCard({
         )}
         {item.needs_attention && (
           <span className="badge badge-attention">⚠️ ATTENTION</span>
+        )}
+        {item.return_requested && (
+          <span className="badge badge-return-requested">🚩 RETURN REQUESTED</span>
         )}
         <span className="badge badge-status">{getStatusBadgeText(item.status)}</span>
                {item.days_held != null && (item.status === 'DRAFT' || item.status === 'ACTIVE' || item.status === 'LISTED') && (
@@ -169,16 +178,13 @@ function InventoryCard({
           </select>
           <input type="number" name="purchase_cost" value={editFormData.purchase_cost} onChange={onEditInputChange} placeholder="Purchase Price (£)" step="0.01" />
           <input type="number" name="listing_price" value={editFormData.listing_price} onChange={onEditInputChange} placeholder="Listing Price (£)" step="0.01" />
-          <input type="text" name="listing_url" value={editFormData.listing_url} onChange={onEditInputChange} placeholder="Listing URL (eBay/Vinted link)" />
-          <select name="box_number" value={editFormData.box_number} onChange={onEditInputChange}>
+          <input type="text" name="ebay_url" value={editFormData.ebay_url} onChange={onEditInputChange} placeholder="eBay listing URL" />
+          <input type="text" name="vinted_url" value={editFormData.vinted_url} onChange={onEditInputChange} placeholder="Vinted listing URL" />
+          <select name="box_id" value={editFormData.box_id} onChange={onEditInputChange}>
             <option value="">Select box</option>
-            <option value="1">Box 1</option>
-            <option value="2">Box 2</option>
-            <option value="3">Box 3</option>
-            <option value="4">Box 4</option>
-            <option value="5">Box 5</option>
-            <option value="6">Box 6</option>
-            <option value="7">Box 7</option>
+            {(boxes || []).map(box => (
+              <option key={box.id} value={box.id}>{box.name}</option>
+            ))}
           </select>
 
           <div className="edit-buttons">
@@ -215,6 +221,13 @@ function InventoryCard({
                   step="0.01"
                   placeholder="0.00"
                 />
+                <label>Sold via</label>
+                <select value={soldPlatformInput} onChange={(e) => setSoldPlatformInput(e.target.value)}>
+                  <option value="">Select platform</option>
+                  <option value="eBay">eBay</option>
+                  <option value="Vinted">Vinted</option>
+                  <option value="Other">Other</option>
+                </select>
                 <div className="edit-buttons">
                   <button className="btn-save" onClick={handleConfirmSoldPrice}>Confirm Sale</button>
                   <button className="btn-cancel" onClick={handleCancelSoldPrice}>Cancel</button>
@@ -315,17 +328,46 @@ function InventoryCard({
                   </div>
                 )}
 
-                {item.box_number && (
+                {item.sold_platform && (
                   <div className="info-row">
-                    <span className="label">Storage:</span>
-                    <span>Box {item.box_number}</span>
+                    <span className="label">Sold Via:</span>
+                    <span>{item.sold_platform}</span>
                   </div>
                 )}
 
-                {item.listing_url && (
+                {item.status === 'SOLD' && item.days_to_dispatch != null && (
                   <div className="info-row">
-                    <span className="label">Listing:</span>
-                    <a href={item.listing_url} target="_blank" rel="noopener noreferrer" className="listing-link">
+                    <span className="label">Dispatch By:</span>
+                    <span className={item.days_to_dispatch < 0 ? 'profit-negative' : ''}>
+                      {item.days_to_dispatch < 0
+                        ? `${Math.abs(item.days_to_dispatch)} days overdue`
+                        : item.days_to_dispatch === 0
+                        ? 'Today'
+                        : `${item.days_to_dispatch} day${item.days_to_dispatch === 1 ? '' : 's'} left`}
+                    </span>
+                  </div>
+                )}
+
+                {item.box_id && boxes && boxes.find(b => b.id === item.box_id) && (
+                  <div className="info-row">
+                    <span className="label">Storage:</span>
+                    <span>{boxes.find(b => b.id === item.box_id).name}</span>
+                  </div>
+                )}
+
+                {item.ebay_url && (
+                  <div className="info-row">
+                    <span className="label">eBay:</span>
+                    <a href={item.ebay_url} target="_blank" rel="noopener noreferrer" className="listing-link">
+                      View listing ↗
+                    </a>
+                  </div>
+                )}
+
+                {item.vinted_url && (
+                  <div className="info-row">
+                    <span className="label">Vinted:</span>
+                    <a href={item.vinted_url} target="_blank" rel="noopener noreferrer" className="listing-link">
                       View listing ↗
                     </a>
                   </div>
@@ -349,6 +391,23 @@ function InventoryCard({
                   <button className="btn-dispatch" onClick={() => onMarkDispatched(item.id)}>
                     📦 Mark Dispatched
                   </button>
+                )}
+
+                {item.status === 'DISPATCHED' && !item.return_requested && (
+                  <button className="btn-flag-return" onClick={() => onFlagReturn(item.id)}>
+                    🚩 Flag Return Requested
+                  </button>
+                )}
+
+                {item.status === 'DISPATCHED' && item.return_requested && (
+                  <>
+                    <button className="btn-return" onClick={() => onReturnItem(item.id, `${item.brand} ${item.category}`)}>
+                      ✅ Confirm Returned & Relist
+                    </button>
+                    <button className="btn-cancel-flag" onClick={() => onUnflagReturn(item.id)}>
+                      Cancel Flag (resolved without return)
+                    </button>
+                  </>
                 )}
 
                 {item.images && item.images.length > 0 && (

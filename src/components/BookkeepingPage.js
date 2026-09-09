@@ -383,6 +383,13 @@ function BookkeepingPage() {
               <span>{summary.receiptsRecorded}</span>
             </div>
 
+            {summary.returnsCount > 0 && (
+              <div className="tax-summary-row">
+                <span className="label">Returns this year (refunded, excluded above)</span>
+                <span>{summary.returnsCount} · {formatMoney(summary.returnsValue)}</span>
+              </div>
+            )}
+
             <p className="tax-disclaimer">
               This is a rough planning estimate only, not a substitute for Self Assessment or professional advice. Figures use 2026/27 rates — please verify anything important with HMRC or an accountant.
             </p>

@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const MAX_PHOTOS = 6;
 
-function PhotoAnalysisFlow({ onItemSaved }) {
+function PhotoAnalysisFlow({ onItemSaved, boxes }) {
   // idle -> camera -> selecting -> analyzing -> review
   const [step, setStep] = useState('idle');
   const [selectedPhotos, setSelectedPhotos] = useState([]);
@@ -171,7 +171,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         visible_defects: result.visible_defects || '',
         purchase_cost: defaultPurchaseCost,
         listing_price: '',
-        box_number: '',
+        box_id: '',
         quantity: '1'
       });
       setStep('review');
@@ -190,7 +190,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         visible_defects: '',
         purchase_cost: defaultPurchaseCost,
         listing_price: '',
-        box_number: '',
+        box_id: '',
         quantity: '1'
       });
       setStep('review');
@@ -226,7 +226,7 @@ function PhotoAnalysisFlow({ onItemSaved }) {
         purchase_cost: reviewData.purchase_cost,
         listing_price: reviewData.listing_price,
         status: 'DRAFT',
-        box_number: reviewData.box_number,
+        box_id: reviewData.box_id,
         quantity: reviewData.quantity || 1
       };
 
@@ -495,15 +495,11 @@ function PhotoAnalysisFlow({ onItemSaved }) {
             </div>
             <div className="form-group">
               <label>Storage Box</label>
-              <select name="box_number" value={reviewData.box_number} onChange={handleReviewInputChange}>
+              <select name="box_id" value={reviewData.box_id} onChange={handleReviewInputChange}>
                 <option value="">Select box</option>
-                <option value="1">Box 1</option>
-                <option value="2">Box 2</option>
-                <option value="3">Box 3</option>
-                <option value="4">Box 4</option>
-                <option value="5">Box 5</option>
-                <option value="6">Box 6</option>
-                <option value="7">Box 7</option>
+                {(boxes || []).map(box => (
+                  <option key={box.id} value={box.id}>{box.name}</option>
+                ))}
               </select>
             </div>
           </div>

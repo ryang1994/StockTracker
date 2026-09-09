@@ -8,6 +8,7 @@ import ComingSoon from './components/ComingSoon';
 import SearchBar from './components/SearchBar';
 import DatabasePage from './components/DatabasePage';
 import BookkeepingPage from './components/BookkeepingPage';
+import SettingsPage from './components/SettingsPage';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
@@ -21,6 +22,21 @@ function App() {
   const [statsRefresh, setStatsRefresh] = useState(0);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [boxes, setBoxes] = useState([]);
+
+  const fetchBoxes = async () => {
+    try {
+      const response = await fetch(`${API_URL}/boxes`);
+      const data = await response.json();
+      setBoxes(data);
+    } catch (err) {
+      console.error('Failed to fetch boxes:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBoxes();
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -60,12 +76,12 @@ function App() {
     }
   };
 
-  const handleConfirmSale = async (itemId, soldPrice, sellingFees) => {
+  const handleConfirmSale = async (itemId, soldPrice, sellingFees, soldPlatform) => {
     try {
       const response = await fetch(`${API_URL}/items/${itemId}/sell`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sold_price: soldPrice, selling_fees: sellingFees })
+        body: JSON.stringify({ sold_price: soldPrice, selling_fees: sellingFees, sold_platform: soldPlatform })
       });
 
       if (!response.ok) throw new Error('Failed to mark as sold');
@@ -99,6 +115,56 @@ function App() {
       alert('Failed to mark item as dispatched.');
     }
   };
+  const handleFlagReturn = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/flag-return`, { method: 'PATCH' });
+      if (!response.ok) throw new Error('Failed to flag return');
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to flag return.');
+    }
+  };
+
+  const handleUnflagReturn = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/unflag-return`, { method: 'PATCH' });
+      if (!response.ok) throw new Error('Failed to cancel return flag');
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to cancel return flag.');
+    }
+  };
+
+  const handleReturnItem = async (itemId, itemName) => {
+    const confirmed = window.confirm(`Confirm "${itemName}" has physically arrived back with you? This will undo the sale and move it back to Draft so you can relist it.`);
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/return`, {
+        method: 'PATCH'
+      });
+
+      if (!response.ok) throw new Error('Failed to process return');
+
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+      setStatsRefresh(prev => prev + 1);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to process return.');
+    }
+  };
+
   const handleUploadPurchaseReceipt = async (itemId, file) => {
     try {
       const formData = new FormData();
@@ -161,7 +227,10 @@ function App() {
       purchase_cost: item.purchase_cost || '',
       listing_price: item.listing_price || '',
       listing_url: item.listing_url || '',
-      box_number: item.box_number || ''
+      box_number: item.box_number || '',
+      box_id: item.box_id || '',
+      ebay_url: item.ebay_url || '',
+      vinted_url: item.vinted_url || ''
     });
   };
 
@@ -274,17 +343,7 @@ function App() {
     }
 
     if (currentPage === 'settings') {
-      return (
-        <ComingSoon
-          title="Settings"
-          icon="⚙️"
-          roadmap={[
-            'Manage storage boxes',
-            'eBay and Vinted account connections',
-            'Backup and export options'
-          ]}
-        />
-      );
+      return <SettingsPage boxes={boxes} onBoxesChanged={fetchBoxes} />;
     }
 
     if (currentPage === 'dispatch') {
@@ -301,6 +360,7 @@ function App() {
                 <InventoryCard
                   key={item.id}
                   item={item}
+                  boxes={boxes}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -313,6 +373,9 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+                  onReturnItem={handleReturnItem}
+                  onFlagReturn={handleFlagReturn}
+                  onUnflagReturn={handleUnflagReturn}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
               ))}
@@ -328,6 +391,7 @@ function App() {
                 <InventoryCard
                   key={item.id}
                   item={item}
+                  boxes={boxes}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -340,6 +404,9 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+                  onReturnItem={handleReturnItem}
+                  onFlagReturn={handleFlagReturn}
+                  onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
@@ -355,6 +422,7 @@ function App() {
         <DashboardStats refreshTrigger={statsRefresh} />
 
         <PhotoAnalysisFlow
+          boxes={boxes}
           onItemSaved={(newItems) => {
             setItems([...newItems, ...items]);
             setStatsRefresh(prev => prev + 1);
@@ -409,6 +477,7 @@ function App() {
                 <InventoryCard
                   key={item.id}
                   item={item}
+                  boxes={boxes}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -421,6 +490,9 @@ function App() {
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
                   onMarkDispatched={handleMarkDispatched}
+                  onReturnItem={handleReturnItem}
+                  onFlagReturn={handleFlagReturn}
+                  onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
