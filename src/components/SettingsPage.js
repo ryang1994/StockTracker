@@ -13,6 +13,7 @@ function SettingsPage({ boxes, onBoxesChanged }) {
 
   const [dispatchForm, setDispatchForm] = useState({ ebay_dispatch_days: '', vinted_dispatch_days: '', archive_after_days: '' });
   const [ebayForm, setEbayForm] = useState({ ebay_api_key: '', ebay_active: false });
+  const [ebayStatus, setEbayStatus] = useState({ connected: false });
   const [vintedForm, setVintedForm] = useState({ vinted_api_key: '', vinted_active: false });
 
   const fetchAppSettings = useCallback(async () => {
@@ -52,10 +53,22 @@ function SettingsPage({ boxes, onBoxesChanged }) {
     }
   }, []);
 
+  const checkEbayStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/ebay/status`);
+      const data = await response.json();
+      setEbayStatus(data);
+    } catch (err) {
+      console.error('Failed to check eBay status:', err);
+      setEbayStatus({ connected: false });
+    }
+  }, []);
+
   useEffect(() => {
     fetchAppSettings();
     checkAiStatus();
-  }, [fetchAppSettings, checkAiStatus]);
+    checkEbayStatus();
+  }, [fetchAppSettings, checkAiStatus, checkEbayStatus]);
 
   const saveAppSettings = async (updates) => {
     try {
@@ -244,32 +257,31 @@ function SettingsPage({ boxes, onBoxesChanged }) {
         <button className="btn-add" onClick={() => saveAppSettings(dispatchForm)}>Save Archive Window</button>
       </div>
 
-      {/* eBay integration placeholder */}
+      {/* eBay - real connection status */}
       <div className="settings-card">
-        <h3>🛒 eBay Integration <span className="placeholder-tag">Placeholder</span></h3>
-        <p className="review-hint">
-          Storage for eBay credentials ahead of full API integration. This does not yet connect live to eBay —
-          real integration needs eBay's official OAuth setup, which is a bigger future project.
-        </p>
-        <div className="review-grid">
-          <div className="form-group">
-            <label>API Key (for future use)</label>
-            <input
-              type="password"
-              value={ebayForm.ebay_api_key}
-              onChange={(e) => setEbayForm({ ...ebayForm, ebay_api_key: e.target.value })}
-            />
-          </div>
+        <h3>🛒 eBay Integration</h3>
+
+        <div className="status-row">
+          <span className={`status-dot ${ebayStatus.connected ? 'online' : 'offline'}`}></span>
+          <span>
+            {ebayStatus.connected
+              ? `Connected${ebayStatus.connectedAt ? ' since ' + new Date(ebayStatus.connectedAt).toLocaleDateString('en-GB') : ''}`
+              : 'Not connected'}
+          </span>
+          <button className="btn-cancel settings-inline-btn" onClick={checkEbayStatus}>Recheck</button>
         </div>
-        <label className="toggle-row">
-          <input
-            type="checkbox"
-            checked={ebayForm.ebay_active}
-            onChange={(e) => setEbayForm({ ...ebayForm, ebay_active: e.target.checked })}
-          />
-          Mark eBay as Active (manual toggle for now)
-        </label>
-        <button className="btn-add" onClick={() => saveAppSettings(ebayForm)}>Save eBay Settings</button>
+
+        {ebayStatus.reason && (
+          <p className="camera-error">{ebayStatus.reason}</p>
+        )}
+
+        <p className="review-hint">
+          Currently connected to eBay's Sandbox (test) environment - nothing here touches your real eBay account or live listings yet.
+        </p>
+
+        <a href={`${API_URL}/ebay/connect`} className="btn-add ebay-connect-btn">
+          {ebayStatus.connected ? 'Reconnect to eBay' : 'Connect to eBay'}
+        </a>
       </div>
 
       {/* Vinted integration placeholder */}

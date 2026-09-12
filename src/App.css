@@ -642,6 +642,14 @@ body {
   cursor: pointer;
 }
 
+.ebay-connect-btn {
+  display: inline-block;
+  text-align: center;
+  text-decoration: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .deadline-banner {
   background: rgba(79, 120, 255, 0.12);
   border: 1px solid rgba(79, 120, 255, 0.3);

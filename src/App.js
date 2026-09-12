@@ -36,6 +36,22 @@ function App() {
 
   useEffect(() => {
     fetchBoxes();
+
+    // If we just landed back from eBay's OAuth redirect, jump straight to Settings
+    const params = new URLSearchParams(window.location.search);
+    const ebayResult = params.get('ebay');
+    if (ebayResult) {
+      setCurrentPage('settings');
+      if (ebayResult === 'connected') {
+        alert('eBay connected successfully!');
+      } else if (ebayResult === 'declined') {
+        alert('eBay connection was declined.');
+      } else if (ebayResult === 'error') {
+        alert('Something went wrong connecting to eBay. Check the backend logs.');
+      }
+      // Clean the URL so refreshing doesn't re-trigger this
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
