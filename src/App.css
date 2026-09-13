@@ -496,6 +496,13 @@ body {
   white-space: nowrap;
 }
 
+.bookkeeping-reimburse-btn {
+  margin-top: 0.5rem;
+  width: auto;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+}
+
 .receipt-upload-label {
   color: #4f78ff;
   font-size: 0.85rem;
@@ -730,6 +737,19 @@ body {
 .marketplace-link:hover {
   border-color: #4ade80;
   background: rgba(74, 222, 128, 0.08);
+}
+
+.personal-copy-fields {
+  background: #1a2040;
+  border-radius: 10px;
+  padding: 0.9rem;
+}
+
+.item-type-picker {
+  margin-bottom: 1rem;
+  background: #1a2040;
+  border-radius: 8px;
+  padding: 0.75rem;
 }
 
 .ebay-category-box {

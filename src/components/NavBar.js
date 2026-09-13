@@ -21,6 +21,7 @@ const checkBackend = async () => {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '🏠' },
+    { id: 'personal', label: 'Personal', icon: '👤' },
     { id: 'database', label: 'Database', icon: '🗄️' },
     { id: 'bookkeeping', label: 'Bookkeeping', icon: '💷' },
     { id: 'analytics', label: 'Analytics', icon: '📊' },

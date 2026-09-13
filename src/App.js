@@ -71,9 +71,9 @@ function App() {
     fetchItems();
   }, []);
 
-  const fetchItems = async () => {
+  const fetchItems = async (type = 'stock') => {
     try {
-      const response = await fetch(`${API_URL}/items`);
+      const response = await fetch(`${API_URL}/items?type=${type}`);
       const data = await response.json();
       setItems(data);
     } catch (err) {
@@ -81,6 +81,15 @@ function App() {
       alert('Could not connect to the backend. Make sure the server is running.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNavigate = (page) => {
+    setCurrentPage(page);
+    if (page === 'personal') {
+      fetchItems('personal');
+    } else if (page === 'dashboard' || page === 'dispatch') {
+      fetchItems('stock');
     }
   };
 
@@ -498,6 +507,50 @@ function App() {
       );
     }
 
+    if (currentPage === 'personal') {
+      return (
+        <section className="inventory-section">
+          <h2>👤 Personal Items ({items.length})</h2>
+          <p className="review-hint">
+            Your own items, not business stock - kept separate from Bookkeeping and Dashboard stats.
+            Add one from the Dashboard's photo flow and choose "Personal" as the item type.
+          </p>
+          {loading ? (
+            <p className="no-items">Loading...</p>
+          ) : items.length === 0 ? (
+            <p className="no-items">No personal items yet.</p>
+          ) : (
+            <div className="inventory-list">
+              {items.map(item => (
+                <InventoryCard
+                  key={item.id}
+                  item={item}
+                  boxes={boxes}
+                  hiddenAspects={hiddenAspects}
+                  isEditing={editingItemId === item.id}
+                  editFormData={editFormData}
+                  activeImageIndex={activeImageIndex[item.id]}
+                  onThumbnailClick={handleThumbnailClick}
+                  onStatusChange={handleStatusChange}
+                  onEditClick={handleEditClick}
+                  onEditInputChange={handleEditInputChange}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onDeleteItem={handleDeleteItem}
+                  onConfirmSale={handleConfirmSale}
+                  onCheckPrice={handleCheckItemPrice}
+                  onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
+                  onCategorySaved={handleCategorySaved}
+                  onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
+                  onOpenFolder={handleOpenFolder}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
     return (
       <>
         <DashboardStats refreshTrigger={statsRefresh} />
@@ -506,7 +559,7 @@ function App() {
           boxes={boxes}
                   hiddenAspects={hiddenAspects}
           onItemSaved={(newItems) => {
-            setItems([...newItems, ...items]);
+            fetchItems(currentPage === 'personal' ? 'personal' : 'stock');
             setStatsRefresh(prev => prev + 1);
           }}
         />
@@ -592,7 +645,7 @@ function App() {
 
   return (
     <div className="App">
-      <NavBar currentPage={currentPage} onNavigate={setCurrentPage} />
+      <NavBar currentPage={currentPage} onNavigate={handleNavigate} />
       <main className="app-main">
         {renderPage()}
       </main>

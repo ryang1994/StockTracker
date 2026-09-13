@@ -150,14 +150,14 @@ function InventoryCard({
   // Automatically suggest a category the moment an item is ready to list, so there's
   // a recommendation waiting rather than requiring an extra click to even see one.
   useEffect(() => {
-    if (item.status === 'LISTED' && !item.ebay_category_id && !categorySuggestions && !categoryLoading) {
+    if (item.item_type !== 'personal' && item.status === 'LISTED' && !item.ebay_category_id && !categorySuggestions && !categoryLoading) {
       handleFindCategory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.status, item.id]);
 
   useEffect(() => {
-    if (item.ebay_category_id && !itemAspects && !aspectsLoading) {
+    if (item.item_type !== 'personal' && item.ebay_category_id && !itemAspects && !aspectsLoading) {
       handleViewAspects();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -588,123 +588,139 @@ function InventoryCard({
                     <CopyField label="Listing Price" value={item.listing_price ? `£${parseFloat(item.listing_price).toFixed(2)}` : null} />
                     <CopyField label="Description" value={item.generated_description} />
 
-                    <div className="ebay-category-box">
-                      <div className="ebay-category-title">eBay Category</div>
+                    {item.item_type === 'personal' ? (
+                      <div className="personal-copy-fields">
+                        <div className="ebay-category-title">Copy-Paste Fields</div>
+                        <CopyField label="Brand" value={item.brand} />
+                        <CopyField label="Size" value={item.size} />
+                        <CopyField label="Type" value={item.category} />
+                        <CopyField label="Colour" value={item.colour} />
+                        <CopyField label="Style" value={item.style} />
+                        <CopyField label="Department" value={item.department} />
+                        <CopyField label="Material" value={item.material} />
+                        <CopyField label="Outer Shell Material" value={item.outer_shell_material} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="ebay-category-box">
+                          <div className="ebay-category-title">eBay Category</div>
 
-                      {item.ebay_category_id ? (
-                        <div className="ebay-category-picked">
-                          <span>🏷️ <strong>{item.ebay_category_name}</strong></span>
-                          <button className="copy-btn" onClick={() => handleCopyAspectValue(item.ebay_category_name)} title="Copy">
-                            📋
-                          </button>
-                          <button type="button" className="card-estimate-check-btn" onClick={handleFindCategory} disabled={categoryLoading}>
-                            change
-                          </button>
-                          <button type="button" className="card-estimate-check-btn" onClick={handleViewAspects} disabled={aspectsLoading}>
-                            {aspectsLoading ? 'loading...' : 'refresh required fields'}
-                          </button>
-                        </div>
-                      ) : categoryLoading ? (
-                        <p className="review-hint">Finding a recommended eBay category...</p>
-                      ) : (
-                        <button type="button" className="card-estimate-check-btn" onClick={handleFindCategory}>
-                          🏷️ Get eBay category recommendation
-                        </button>
-                      )}
-
-                      {categorySuggestions && categorySuggestions.length > 0 && (
-                        <div className="category-suggestions-list">
-                          <p className="review-hint">
-                            {item.ebay_category_id ? 'Pick a different category:' : `Recommended: ${categorySuggestions[0].categoryName}. Tap to confirm, or pick another below.`}
-                          </p>
-                          {categorySuggestions.map((s, idx) => (
-                            <button
-                              key={s.categoryId}
-                              type="button"
-                              className={`category-suggestion-btn ${idx === 0 && !item.ebay_category_id ? 'category-suggestion-recommended' : ''}`}
-                              onClick={() => handlePickCategory(s.categoryId, s.categoryName)}
-                            >
-                              {idx === 0 && !item.ebay_category_id ? '⭐ ' : ''}{s.categoryName}
-                              {s.path && <span className="category-suggestion-path">{s.path}</span>}
+                          {item.ebay_category_id ? (
+                            <div className="ebay-category-picked">
+                              <span>🏷️ <strong>{item.ebay_category_name}</strong></span>
+                              <button className="copy-btn" onClick={() => handleCopyAspectValue(item.ebay_category_name)} title="Copy">
+                                📋
+                              </button>
+                              <button type="button" className="card-estimate-check-btn" onClick={handleFindCategory} disabled={categoryLoading}>
+                                change
+                              </button>
+                              <button type="button" className="card-estimate-check-btn" onClick={handleViewAspects} disabled={aspectsLoading}>
+                                {aspectsLoading ? 'loading...' : 'refresh required fields'}
+                              </button>
+                            </div>
+                          ) : categoryLoading ? (
+                            <p className="review-hint">Finding a recommended eBay category...</p>
+                          ) : (
+                            <button type="button" className="card-estimate-check-btn" onClick={handleFindCategory}>
+                              🏷️ Get eBay category recommendation
                             </button>
-                          ))}
-                        </div>
-                      )}
+                          )}
 
-                      {categorySuggestions && categorySuggestions.length === 0 && (
-                        <p className="no-items">No category suggestions found - try adjusting the brand/category text.</p>
-                      )}
+                          {categorySuggestions && categorySuggestions.length > 0 && (
+                            <div className="category-suggestions-list">
+                              <p className="review-hint">
+                                {item.ebay_category_id ? 'Pick a different category:' : `Recommended: ${categorySuggestions[0].categoryName}. Tap to confirm, or pick another below.`}
+                              </p>
+                              {categorySuggestions.map((s, idx) => (
+                                <button
+                                  key={s.categoryId}
+                                  type="button"
+                                  className={`category-suggestion-btn ${idx === 0 && !item.ebay_category_id ? 'category-suggestion-recommended' : ''}`}
+                                  onClick={() => handlePickCategory(s.categoryId, s.categoryName)}
+                                >
+                                  {idx === 0 && !item.ebay_category_id ? '⭐ ' : ''}{s.categoryName}
+                                  {s.path && <span className="category-suggestion-path">{s.path}</span>}
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
-                      {itemAspects && (
-                        <div className="aspects-fields">
-                          {itemAspects
-                            .filter(a => a.required || !(hiddenAspects || []).includes(a.name.toLowerCase()))
-                            .map(a => {
-                            const savedValue = item.ebay_aspects && item.ebay_aspects[a.name];
-                            const guess = guessValueForAspect(a.name, item);
-                            const hasControlledValues = a.mode === 'SELECTION_ONLY' && a.values && a.values.length > 0;
-                            const currentValue = savedValue || (hasControlledValues ? findClosestValue(guess, a.values) : guess);
+                          {categorySuggestions && categorySuggestions.length === 0 && (
+                            <p className="no-items">No category suggestions found - try adjusting the brand/category text.</p>
+                          )}
 
-                            if (hasControlledValues) {
-                              return (
-                                <div key={a.name} className="copy-field">
-                                  <span className="copy-field-label">
-                                    {a.name} {a.required && <span className="aspect-required-tag">required</span>}
-                                  </span>
-                                  <div className="copy-field-value-row">
-                                    <select
-                                      className="aspect-select"
-                                      value={currentValue}
-                                      onChange={(e) => handleAspectChange(a.name, e.target.value)}
-                                    >
-                                      {!currentValue && <option value="">-- Select --</option>}
-                                      {a.values.map(v => <option key={v} value={v}>{v}</option>)}
-                                    </select>
-                                    <button className="copy-btn" onClick={() => handleCopyAspectValue(currentValue)} title="Copy">
-                                      📋
-                                    </button>
+                          {itemAspects && (
+                            <div className="aspects-fields">
+                              {itemAspects
+                                .filter(a => a.required || !(hiddenAspects || []).includes(a.name.toLowerCase()))
+                                .map(a => {
+                                const savedValue = item.ebay_aspects && item.ebay_aspects[a.name];
+                                const guess = guessValueForAspect(a.name, item);
+                                const hasControlledValues = a.mode === 'SELECTION_ONLY' && a.values && a.values.length > 0;
+                                const currentValue = savedValue || (hasControlledValues ? findClosestValue(guess, a.values) : guess);
+
+                                if (hasControlledValues) {
+                                  return (
+                                    <div key={a.name} className="copy-field">
+                                      <span className="copy-field-label">
+                                        {a.name} {a.required && <span className="aspect-required-tag">required</span>}
+                                      </span>
+                                      <div className="copy-field-value-row">
+                                        <select
+                                          className="aspect-select"
+                                          value={currentValue}
+                                          onChange={(e) => handleAspectChange(a.name, e.target.value)}
+                                        >
+                                          {!currentValue && <option value="">-- Select --</option>}
+                                          {a.values.map(v => <option key={v} value={v}>{v}</option>)}
+                                        </select>
+                                        <button className="copy-btn" onClick={() => handleCopyAspectValue(currentValue)} title="Copy">
+                                          📋
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                const draftValue = aspectDrafts[a.name] !== undefined ? aspectDrafts[a.name] : currentValue;
+
+                                return (
+                                  <div key={a.name} className="copy-field">
+                                    <span className="copy-field-label">
+                                      {a.name} {a.required && <span className="aspect-required-tag">required</span>}
+                                    </span>
+                                    <div className="copy-field-value-row">
+                                      <input
+                                        type="text"
+                                        className="aspect-text-input"
+                                        value={draftValue}
+                                        onChange={(e) => setAspectDrafts({ ...aspectDrafts, [a.name]: e.target.value })}
+                                        onBlur={(e) => handleAspectChange(a.name, e.target.value)}
+                                      />
+                                      <button className="copy-btn" onClick={() => handleCopyAspectValue(draftValue)} title="Copy">
+                                        📋
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              );
-                            }
-
-                            const draftValue = aspectDrafts[a.name] !== undefined ? aspectDrafts[a.name] : currentValue;
-
-                            return (
-                              <div key={a.name} className="copy-field">
-                                <span className="copy-field-label">
-                                  {a.name} {a.required && <span className="aspect-required-tag">required</span>}
-                                </span>
-                                <div className="copy-field-value-row">
-                                  <input
-                                    type="text"
-                                    className="aspect-text-input"
-                                    value={draftValue}
-                                    onChange={(e) => setAspectDrafts({ ...aspectDrafts, [a.name]: e.target.value })}
-                                    onBlur={(e) => handleAspectChange(a.name, e.target.value)}
-                                  />
-                                  <button className="copy-btn" onClick={() => handleCopyAspectValue(draftValue)} title="Copy">
-                                    📋
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    <button
-                      type="button"
-                      className="btn-publish-ebay btn-publish-ebay-live"
-                      onClick={handlePublishToEbay}
-                      disabled={publishing || !item.ebay_category_id}
-                    >
-                      {publishing ? 'Publishing...' : '🚀 Publish to eBay'}
-                    </button>
+                        <button
+                          type="button"
+                          className="btn-publish-ebay btn-publish-ebay-live"
+                          onClick={handlePublishToEbay}
+                          disabled={publishing || !item.ebay_category_id}
+                        >
+                          {publishing ? 'Publishing...' : '🚀 Publish to eBay'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
-                {item.status === 'SOLD' && (
+                {item.status === 'SOLD' && item.item_type !== 'personal' && (
                   <button className="btn-dispatch" onClick={() => onMarkDispatched(item.id)}>
                     📦 Mark Dispatched
                   </button>

@@ -48,7 +48,7 @@ function BookkeepingPage() {
   const [mileageForm, setMileageForm] = useState({ trip_date: todayISO(), purpose: '', miles: '', notes: '' });
   const [mileageReceipt, setMileageReceipt] = useState(null);
 
-  const [expenseForm, setExpenseForm] = useState({ expense_date: todayISO(), category: '', description: '', amount: '', notes: '' });
+  const [expenseForm, setExpenseForm] = useState({ expense_date: todayISO(), category: '', description: '', amount: '', notes: '', paid_from: 'Revolut Pro' });
   const [expenseReceipt, setExpenseReceipt] = useState(null);
 
   const [yearSettingsForm, setYearSettingsForm] = useState({ employment_income: '' });
@@ -224,6 +224,16 @@ function BookkeepingPage() {
     }
   };
 
+  const handleMarkReimbursed = async (id) => {
+    try {
+      await fetch(`${API_URL}/expenses/${id}/reimburse`, { method: 'PATCH' });
+      fetchAll(selectedYear);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to mark this as reimbursed.');
+    }
+  };
+
   const handleExport = () => {
     window.open(`${API_URL}/bookkeeping/export?taxYear=${selectedYear}`, '_blank');
   };
@@ -390,6 +400,13 @@ function BookkeepingPage() {
               </div>
             )}
 
+            {summary.owedToYou > 0 && (
+              <div className="tax-summary-row">
+                <span className="label">💳 Owed to you (personally-funded, not yet paid back)</span>
+                <span>{formatMoney(summary.owedToYou)}</span>
+              </div>
+            )}
+
             <p className="tax-disclaimer">
               This is a rough planning estimate only, not a substitute for Self Assessment or professional advice. Figures use 2026/27 rates — please verify anything important with HMRC or an accountant.
             </p>
@@ -527,6 +544,15 @@ function BookkeepingPage() {
                 <input type="number" step="0.01" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
               </div>
               <div className="form-group">
+                <label>Paid From</label>
+                <select value={expenseForm.paid_from} onChange={(e) => setExpenseForm({ ...expenseForm, paid_from: e.target.value })}>
+                  <option value="Revolut Pro">Revolut Pro (business account)</option>
+                  <option value="Personal Funds">Personal Funds</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
                 <label>Notes (evidence)</label>
                 <input type="text" placeholder="e.g. Bought for parcel labelling, used solely for business" value={expenseForm.notes} onChange={(e) => setExpenseForm({ ...expenseForm, notes: e.target.value })} />
               </div>
@@ -552,12 +578,20 @@ function BookkeepingPage() {
                   <strong>{new Date(entry.expense_date).toLocaleDateString('en-GB')}</strong> — {entry.description || entry.category || 'Expense'}
                   <div className="bookkeeping-card-meta">
                     {entry.category && <span>{entry.category} • </span>}{formatMoney(entry.amount)}
+                    {entry.paid_from && entry.paid_from !== 'Revolut Pro' && (
+                      <span> • Paid from: {entry.paid_from}{entry.reimbursed ? ' (reimbursed ✅)' : ''}</span>
+                    )}
                   </div>
                   {entry.notes && <div className="bookkeeping-card-notes">📝 {entry.notes}</div>}
                   {entry.receipt_key && (
                     <a href={`${SERVER_URL}/${entry.receipt_key}`} target="_blank" rel="noopener noreferrer" className="listing-link">
                       View receipt ↗
                     </a>
+                  )}
+                  {entry.paid_from && entry.paid_from !== 'Revolut Pro' && !entry.reimbursed && (
+                    <button className="btn-cancel bookkeeping-reimburse-btn" onClick={() => handleMarkReimbursed(entry.id)}>
+                      💳 Mark as Paid Back
+                    </button>
                   )}
                 </div>
                 <button className="btn-delete bookkeeping-delete-btn" onClick={() => handleDeleteExpense(entry.id)}>🗑️</button>

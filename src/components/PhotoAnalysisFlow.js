@@ -307,7 +307,8 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
         ebay_estimated_low: priceCheck ? priceCheck.lowPrice : null,
         ebay_estimated_high: priceCheck ? priceCheck.highPrice : null,
         ebay_estimated_median: priceCheck ? priceCheck.medianPrice : null,
-        ebay_estimated_count: priceCheck ? priceCheck.totalActive : null
+        ebay_estimated_count: priceCheck ? priceCheck.totalActive : null,
+        item_type: reviewData.item_type === 'personal' ? 'personal' : 'stock'
       };
 
       const response = await fetch(`${API_URL}/items`, {
@@ -497,6 +498,17 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
         <div className="review-panel">
           <h3>Review AI Suggestions</h3>
           <p className="review-hint">Check and correct anything before saving. Fields marked * are required by eBay before a listing can be published.</p>
+
+          <div className="form-group item-type-picker">
+            <label>Item Type</label>
+            <select
+              value={reviewData.item_type || 'stock'}
+              onChange={(e) => setReviewData({ ...reviewData, item_type: e.target.value })}
+            >
+              <option value="stock">Stock (business reselling)</option>
+              <option value="personal">Personal (not business stock)</option>
+            </select>
+          </div>
 
           <div className="price-check-box">
             {reviewData.style && (
