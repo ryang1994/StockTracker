@@ -722,6 +722,115 @@ body {
   border-color: #4f78ff;
 }
 
+.marketplace-link {
+  text-decoration: none;
+  border-color: #4ade80;
+}
+
+.marketplace-link:hover {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.ebay-category-box {
+  margin-top: 0.6rem;
+}
+
+.ebay-category-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  color: #d0d4e8;
+  font-size: 0.82rem;
+}
+
+.category-suggestions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.category-suggestion-btn {
+  text-align: left;
+  background: #0f1226;
+  border: 1px solid #2a3155;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  color: #d0d4e8;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.category-suggestion-btn:hover {
+  border-color: #4f78ff;
+}
+
+.category-suggestion-path {
+  display: block;
+  color: #6b7299;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.item-aspects-list {
+  margin-top: 0.5rem;
+  background: #0f1226;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.aspect-row {
+  font-size: 0.78rem;
+  color: #8b93b8;
+}
+
+.aspect-required {
+  color: #fb923c;
+  font-weight: 600;
+}
+
+.ebay-category-title {
+  color: #8b93b8;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.4rem;
+}
+
+.category-suggestion-recommended {
+  border-color: #4ade80;
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.btn-publish-ebay {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.7rem;
+  background: #2a3155;
+  color: #6b7299;
+  border: 1px dashed #3a4270;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.btn-publish-ebay-live:not(:disabled) {
+  background: linear-gradient(135deg, #2d5bff, #4f78ff);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-publish-ebay-live:not(:disabled):hover {
+  background: linear-gradient(135deg, #2549d6, #3d63e0);
+}
+
 .price-check-results {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -1561,6 +1670,45 @@ body {
   font-size: 1rem;
   padding: 0.2rem 0.4rem;
   flex-shrink: 0;
+}
+
+.aspects-fields {
+  margin-top: 0.75rem;
+}
+
+.aspect-select {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.aspect-select option {
+  background: #12172b;
+  color: white;
+}
+
+.aspect-text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.88rem;
+}
+
+.aspect-text-input:focus {
+  outline: none;
+}
+
+.aspect-required-tag {
+  color: #fb923c;
+  font-size: 0.65rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 700;
+  margin-left: 0.3rem;
 }
 
 .listing-tools {

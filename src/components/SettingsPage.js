@@ -12,8 +12,15 @@ function SettingsPage({ boxes, onBoxesChanged }) {
   const [editingBoxName, setEditingBoxName] = useState('');
 
   const [dispatchForm, setDispatchForm] = useState({ ebay_dispatch_days: '', vinted_dispatch_days: '', archive_after_days: '' });
+  const [hiddenAspectsInput, setHiddenAspectsInput] = useState('');
   const [ebayForm, setEbayForm] = useState({ ebay_api_key: '', ebay_active: false });
   const [ebayStatus, setEbayStatus] = useState({ connected: false });
+  const [policyStatus, setPolicyStatus] = useState({ optedIn: false });
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [flatShippingCost, setFlatShippingCost] = useState('3.99');
+  const [locationStatus, setLocationStatus] = useState({ configured: false });
+  const [postalCode, setPostalCode] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
   const [vintedForm, setVintedForm] = useState({ vinted_api_key: '', vinted_active: false });
 
   const fetchAppSettings = useCallback(async () => {
@@ -26,6 +33,7 @@ function SettingsPage({ boxes, onBoxesChanged }) {
         vinted_dispatch_days: data.vinted_dispatch_days || '3',
         archive_after_days: data.archive_after_days || '30'
       });
+      setHiddenAspectsInput(data.ebay_hidden_aspects || 'Garment Care,MPN,Pattern,Product Line');
       setEbayForm({
         ebay_api_key: data.ebay_api_key || '',
         ebay_active: data.ebay_active === 'true'
@@ -64,11 +72,100 @@ function SettingsPage({ boxes, onBoxesChanged }) {
     }
   }, []);
 
+  const checkPolicyStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/ebay/business-policies/status`);
+      const data = await response.json();
+      setPolicyStatus(data);
+    } catch (err) {
+      console.error('Failed to check business policy status:', err);
+    }
+  }, []);
+
+  const checkLocationStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/ebay/inventory-location/status`);
+      const data = await response.json();
+      setLocationStatus(data);
+    } catch (err) {
+      console.error('Failed to check location status:', err);
+    }
+  }, []);
+
+  const handleCreateLocation = async () => {
+    if (!postalCode.trim()) {
+      alert('Enter a postcode first.');
+      return;
+    }
+    setLocationLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/ebay/inventory-location/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postalCode })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert('Failed to create location: ' + JSON.stringify(data.details || data.error));
+        return;
+      }
+      await checkLocationStatus();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create inventory location.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const handleOptIn = async () => {
+    setPolicyLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/ebay/business-policies/opt-in`, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) {
+        alert('Opt-in failed: ' + (data.error || 'Unknown error') + '. This can be a known eBay Sandbox glitch - try again in a moment.');
+        return;
+      }
+      await checkPolicyStatus();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to opt in.');
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  const handleCreatePolicies = async () => {
+    setPolicyLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/ebay/business-policies/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flatShippingCost })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(`Policy creation failed at the ${data.step || 'unknown'} step: ` + JSON.stringify(data.details || data.error));
+        return;
+      }
+      alert('Business policies created successfully!');
+      fetchAppSettings();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create business policies.');
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAppSettings();
     checkAiStatus();
     checkEbayStatus();
-  }, [fetchAppSettings, checkAiStatus, checkEbayStatus]);
+    checkPolicyStatus();
+    checkLocationStatus();
+  }, [fetchAppSettings, checkAiStatus, checkEbayStatus, checkPolicyStatus, checkLocationStatus]);
 
   const saveAppSettings = async (updates) => {
     try {
@@ -257,6 +354,29 @@ function SettingsPage({ boxes, onBoxesChanged }) {
         <button className="btn-add" onClick={() => saveAppSettings(dispatchForm)}>Save Archive Window</button>
       </div>
 
+      {/* Hide low-value optional eBay fields */}
+      <div className="settings-card">
+        <h3>🧹 Simplify eBay Required Fields</h3>
+        <p className="review-hint">
+          Optional eBay fields listed here are hidden from item cards to reduce clutter. Required fields always
+          show regardless. Separate names with commas.
+        </p>
+        <div className="review-grid">
+          <div className="form-group">
+            <label>Hidden Optional Fields</label>
+            <input
+              type="text"
+              value={hiddenAspectsInput}
+              onChange={(e) => setHiddenAspectsInput(e.target.value)}
+              placeholder="e.g. Garment Care, MPN, Pattern, Product Line"
+            />
+          </div>
+        </div>
+        <button className="btn-add" onClick={() => saveAppSettings({ ebay_hidden_aspects: hiddenAspectsInput })}>
+          Save Hidden Fields
+        </button>
+      </div>
+
       {/* eBay - real connection status */}
       <div className="settings-card">
         <h3>🛒 eBay Integration</h3>
@@ -283,6 +403,87 @@ function SettingsPage({ boxes, onBoxesChanged }) {
           {ebayStatus.connected ? 'Reconnect to eBay' : 'Connect to eBay'}
         </a>
       </div>
+
+      {/* eBay Business Policies - required before any listing can publish */}
+      {ebayStatus.connected && (
+        <div className="settings-card">
+          <h3>📋 eBay Business Policies</h3>
+          <p className="review-hint">
+            Required one-time setup before eBay will let you publish a listing. Sets shipping (3 day handling,
+            buyer pays a flat rate), returns (14 days, buyer pays return postage), and payment terms.
+          </p>
+
+          <div className="status-row">
+            <span className={`status-dot ${policyStatus.optedIn ? 'online' : 'offline'}`}></span>
+            <span>{policyStatus.optedIn ? 'Opted in to Business Policies' : 'Not opted in yet'}</span>
+            <button className="btn-cancel settings-inline-btn" onClick={checkPolicyStatus}>Recheck</button>
+          </div>
+
+          {!policyStatus.optedIn ? (
+            <button className="btn-add" onClick={handleOptIn} disabled={policyLoading}>
+              {policyLoading ? 'Opting in...' : 'Opt In to Business Policies'}
+            </button>
+          ) : (
+            <>
+              {appSettings.ebay_fulfillment_policy_id ? (
+                <p className="price-check-range">✅ Policies already created and ready to use.</p>
+              ) : (
+                <>
+                  <div className="review-grid">
+                    <div className="form-group">
+                      <label>Flat Shipping Cost (£)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={flatShippingCost}
+                        onChange={(e) => setFlatShippingCost(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button className="btn-add" onClick={handleCreatePolicies} disabled={policyLoading}>
+                    {policyLoading ? 'Creating...' : 'Create Business Policies'}
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* eBay inventory location - second one-time prerequisite before publishing */}
+      {ebayStatus.connected && (
+        <div className="settings-card">
+          <h3>📍 eBay Shipping Location</h3>
+          <p className="review-hint">
+            Required one-time setup - tells eBay roughly where your items ship from. Just needs a postcode, not a full address.
+          </p>
+
+          <div className="status-row">
+            <span className={`status-dot ${locationStatus.configured ? 'online' : 'offline'}`}></span>
+            <span>{locationStatus.configured ? 'Location set up' : 'Not set up yet'}</span>
+            <button className="btn-cancel settings-inline-btn" onClick={checkLocationStatus}>Recheck</button>
+          </div>
+
+          {!locationStatus.configured && (
+            <>
+              <div className="review-grid">
+                <div className="form-group">
+                  <label>Postcode</label>
+                  <input
+                    type="text"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    placeholder="e.g. NP20"
+                  />
+                </div>
+              </div>
+              <button className="btn-add" onClick={handleCreateLocation} disabled={locationLoading}>
+                {locationLoading ? 'Setting up...' : 'Set Up Location'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Vinted integration placeholder */}
       <div className="settings-card">

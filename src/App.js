@@ -23,6 +23,7 @@ function App() {
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [boxes, setBoxes] = useState([]);
+  const [hiddenAspects, setHiddenAspects] = useState([]);
 
   const fetchBoxes = async () => {
     try {
@@ -34,8 +35,20 @@ function App() {
     }
   };
 
+  const fetchHiddenAspects = async () => {
+    try {
+      const response = await fetch(`${API_URL}/settings/app`);
+      const data = await response.json();
+      const list = (data.ebay_hidden_aspects || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      setHiddenAspects(list);
+    } catch (err) {
+      console.error('Failed to fetch hidden aspects setting:', err);
+    }
+  };
+
   useEffect(() => {
     fetchBoxes();
+    fetchHiddenAspects();
 
     // If we just landed back from eBay's OAuth redirect, jump straight to Settings
     const params = new URLSearchParams(window.location.search);
@@ -199,6 +212,12 @@ function App() {
     }
   };
 
+  const handleCategorySaved = (updatedItem) => {
+    setItems(items.map(item =>
+      item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+    ));
+  };
+
   const handleCheckItemPrice = async (itemId) => {
     try {
       const response = await fetch(`${API_URL}/items/${itemId}/price-check`, { method: 'POST' });
@@ -271,6 +290,11 @@ function App() {
       brand: item.brand || '',
       category: item.category || '',
       size: item.size || '',
+      colour: item.colour || '',
+      style: item.style || '',
+      department: item.department || '',
+      material: item.material || '',
+      outer_shell_material: item.outer_shell_material || '',
       condition: item.condition || '',
       purchase_cost: item.purchase_cost || '',
       listing_price: item.listing_price || '',
@@ -391,7 +415,8 @@ function App() {
     }
 
     if (currentPage === 'settings') {
-      return <SettingsPage boxes={boxes} onBoxesChanged={fetchBoxes} />;
+      return <SettingsPage boxes={boxes}
+                  hiddenAspects={hiddenAspects} onBoxesChanged={fetchBoxes} />;
     }
 
     if (currentPage === 'dispatch') {
@@ -409,6 +434,7 @@ function App() {
                   key={item.id}
                   item={item}
                   boxes={boxes}
+                  hiddenAspects={hiddenAspects}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -425,6 +451,7 @@ function App() {
                   onFlagReturn={handleFlagReturn}
                   onCheckPrice={handleCheckItemPrice}
                   onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
+                  onCategorySaved={handleCategorySaved}
                   onUnflagReturn={handleUnflagReturn}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
@@ -442,6 +469,7 @@ function App() {
                   key={item.id}
                   item={item}
                   boxes={boxes}
+                  hiddenAspects={hiddenAspects}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -458,6 +486,7 @@ function App() {
                   onFlagReturn={handleFlagReturn}
                   onCheckPrice={handleCheckItemPrice}
                   onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
+                  onCategorySaved={handleCategorySaved}
                   onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
@@ -475,6 +504,7 @@ function App() {
 
         <PhotoAnalysisFlow
           boxes={boxes}
+                  hiddenAspects={hiddenAspects}
           onItemSaved={(newItems) => {
             setItems([...newItems, ...items]);
             setStatsRefresh(prev => prev + 1);
@@ -530,6 +560,7 @@ function App() {
                   key={item.id}
                   item={item}
                   boxes={boxes}
+                  hiddenAspects={hiddenAspects}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -546,6 +577,7 @@ function App() {
                   onFlagReturn={handleFlagReturn}
                   onCheckPrice={handleCheckItemPrice}
                   onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
+                  onCategorySaved={handleCategorySaved}
                   onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
