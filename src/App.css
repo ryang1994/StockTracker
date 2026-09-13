@@ -650,6 +650,101 @@ body {
   box-sizing: border-box;
 }
 
+.price-check-box {
+  background: #1a2040;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.price-check-btn {
+  width: 100%;
+}
+
+.price-check-toggle {
+  margin: 0 0 0.6rem;
+}
+
+.price-check-broadened {
+  color: #fb923c;
+  font-size: 0.8rem;
+  margin: 0 0 0.4rem;
+}
+
+.card-estimate {
+  color: #4ade80;
+  font-size: 0.78rem;
+  margin: 0.2rem 0 0;
+}
+
+.card-estimate-refresh {
+  background: none;
+  border: none;
+  color: #6b7299;
+  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.card-estimate-check-btn {
+  background: none;
+  border: none;
+  color: #4f78ff;
+  font-size: 0.78rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.2rem;
+  text-decoration: underline;
+}
+
+.marketplace-status-row {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.marketplace-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #1a2040;
+  border: 1px solid #2a3155;
+  border-radius: 20px;
+  padding: 0.35rem 0.75rem;
+  color: #d0d4e8;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.marketplace-toggle:hover {
+  border-color: #4f78ff;
+}
+
+.price-check-results {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #2a3155;
+}
+
+.price-check-summary {
+  color: white;
+  margin: 0 0 0.3rem;
+}
+
+.price-check-range {
+  color: #4ade80;
+  font-weight: 600;
+  margin: 0 0 0.3rem;
+}
+
+.price-check-disclaimer {
+  color: #6b7299;
+  font-size: 0.75rem;
+  margin: 0;
+}
+
 .deadline-banner {
   background: rgba(79, 120, 255, 0.12);
   border: 1px solid rgba(79, 120, 255, 0.3);

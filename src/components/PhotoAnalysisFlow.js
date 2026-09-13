@@ -15,6 +15,66 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
     () => localStorage.getItem('stocktracker_default_purchase_cost') || ''
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [priceCheck, setPriceCheck] = useState(null);
+  const [priceCheckLoading, setPriceCheckLoading] = useState(false);
+  const [priceCheckError, setPriceCheckError] = useState(null);
+  const [includeStyleInSearch, setIncludeStyleInSearch] = useState(false);
+
+  const handleCheckPrices = async () => {
+    // Strip parenthetical measurements like "(146-152 cms)" - real listings rarely
+    // include that verbatim, and it was killing search results entirely
+    const cleanedSize = (reviewData.size || '').replace(/\([^)]*\)/g, '').trim();
+
+    const parts = [
+      reviewData.brand,
+      reviewData.department,
+      reviewData.category,
+      cleanedSize,
+      includeStyleInSearch ? reviewData.style : null
+    ];
+    const query = parts.filter(p => p && p.trim()).join(' ').trim();
+
+    if (!query) {
+      alert('Add at least a brand or category first so there is something to search for.');
+      return;
+    }
+
+    setPriceCheckLoading(true);
+    setPriceCheckError(null);
+    setPriceCheck(null);
+
+    try {
+      const response = await fetch(`${API_URL}/ebay/price-check?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Price check failed');
+      }
+
+      // If the specific search found nothing, automatically broaden and try again
+      if (data.totalActive === 0) {
+        const broaderParts = [reviewData.brand, reviewData.category];
+        const broaderQuery = broaderParts.filter(p => p && p.trim()).join(' ').trim();
+
+        if (broaderQuery && broaderQuery !== query) {
+          const broaderResponse = await fetch(`${API_URL}/ebay/price-check?q=${encodeURIComponent(broaderQuery)}`);
+          const broaderData = await broaderResponse.json();
+
+          if (broaderResponse.ok && broaderData.totalActive > 0) {
+            setPriceCheck({ ...broaderData, broadened: true });
+            return;
+          }
+        }
+      }
+
+      setPriceCheck(data);
+    } catch (err) {
+      console.error(err);
+      setPriceCheckError('Could not fetch eBay prices right now.');
+    } finally {
+      setPriceCheckLoading(false);
+    }
+  };
 
   const handleDefaultCostChange = (e) => {
     const value = e.target.value;
@@ -135,6 +195,8 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
     setReviewData({});
     setCameraError(null);
     setIsSaving(false);
+    setPriceCheck(null);
+    setPriceCheckError(null);
   };
 
   const handleCancel = () => {
@@ -202,11 +264,25 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
     setReviewData({ ...reviewData, [name]: value });
   };
 
+  const REQUIRED_FIELDS = [
+    { key: 'brand', label: 'Brand' },
+    { key: 'category', label: 'Category' },
+    { key: 'department', label: 'Department' },
+    { key: 'size', label: 'Size' },
+    { key: 'colour', label: 'Colour' },
+    { key: 'style', label: 'Style' },
+    { key: 'material', label: 'Material' },
+    { key: 'outer_shell_material', label: 'Outer Shell Material' },
+    { key: 'condition', label: 'Condition' },
+    { key: 'listing_price', label: 'Listing Price' }
+  ];
+
   const handleConfirmSave = async () => {
     if (isSaving) return; // already in progress - ignore extra taps
 
-    if (!reviewData.brand && !reviewData.category) {
-      alert('Please fill in at least a brand or category before saving.');
+    const missing = REQUIRED_FIELDS.filter(f => !reviewData[f.key] || !String(reviewData[f.key]).trim());
+    if (missing.length > 0) {
+      alert('Please fill in before saving: ' + missing.map(f => f.label).join(', '));
       return;
     }
 
@@ -227,7 +303,11 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
         listing_price: reviewData.listing_price,
         status: 'DRAFT',
         box_id: reviewData.box_id,
-        quantity: reviewData.quantity || 1
+        quantity: reviewData.quantity || 1,
+        ebay_estimated_low: priceCheck ? priceCheck.lowPrice : null,
+        ebay_estimated_high: priceCheck ? priceCheck.highPrice : null,
+        ebay_estimated_median: priceCheck ? priceCheck.medianPrice : null,
+        ebay_estimated_count: priceCheck ? priceCheck.totalActive : null
       };
 
       const response = await fetch(`${API_URL}/items`, {
@@ -416,7 +496,47 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
       {step === 'review' && (
         <div className="review-panel">
           <h3>Review AI Suggestions</h3>
-          <p className="review-hint">Check and correct anything before saving.</p>
+          <p className="review-hint">Check and correct anything before saving. Fields marked * are required by eBay before a listing can be published.</p>
+
+          <div className="price-check-box">
+            {reviewData.style && (
+              <label className="toggle-row price-check-toggle">
+                <input
+                  type="checkbox"
+                  checked={includeStyleInSearch}
+                  onChange={(e) => setIncludeStyleInSearch(e.target.checked)}
+                />
+                Also search by style ("{reviewData.style}") for a tighter match
+              </label>
+            )}
+
+            <button type="button" className="btn-cancel price-check-btn" onClick={handleCheckPrices} disabled={priceCheckLoading}>
+              {priceCheckLoading ? 'Checking eBay...' : '🔍 Check eBay Prices'}
+            </button>
+
+            {priceCheckError && <p className="camera-error">{priceCheckError}</p>}
+
+            {priceCheck && (
+              <div className="price-check-results">
+                {priceCheck.broadened && (
+                  <p className="price-check-broadened">No exact match found - showing a broader search instead:</p>
+                )}
+                <p className="price-check-summary">
+                  <strong>{priceCheck.totalActive}</strong> currently listed on eBay UK matching <em>"{priceCheck.query}"</em>
+                </p>
+                {priceCheck.sampledCount > 0 ? (
+                  <p className="price-check-range">
+                    Range: £{priceCheck.lowPrice.toFixed(2)} – £{priceCheck.highPrice.toFixed(2)} · Median: £{priceCheck.medianPrice.toFixed(2)}
+                  </p>
+                ) : (
+                  <p className="price-check-range">No priced listings found for this search.</p>
+                )}
+                <p className="price-check-disclaimer">
+                  Based on current asking prices, not confirmed sold prices.
+                </p>
+              </div>
+            )}
+          </div>
 
           {photoPreviewUrls.length > 0 && (
             <div className="photo-select-strip">
@@ -437,39 +557,39 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
 
           <div className="review-grid">
             <div className="form-group">
-              <label>Brand</label>
+              <label>Brand *</label>
               <input type="text" name="brand" value={reviewData.brand} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Category</label>
+              <label>Category *</label>
               <input type="text" name="category" value={reviewData.category} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Department</label>
+              <label>Department *</label>
               <input type="text" name="department" value={reviewData.department} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Size</label>
+              <label>Size *</label>
               <input type="text" name="size" value={reviewData.size} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Colour</label>
+              <label>Colour *</label>
               <input type="text" name="colour" value={reviewData.colour} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Style</label>
+              <label>Style *</label>
               <input type="text" name="style" value={reviewData.style} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Material</label>
+              <label>Material *</label>
               <input type="text" name="material" value={reviewData.material} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Outer Shell Material</label>
+              <label>Outer Shell Material *</label>
               <input type="text" name="outer_shell_material" value={reviewData.outer_shell_material} onChange={handleReviewInputChange} />
             </div>
             <div className="form-group">
-              <label>Condition</label>
+              <label>Condition *</label>
               <select name="condition" value={reviewData.condition} onChange={handleReviewInputChange}>
                 <option value="">Select condition</option>
                 <option value="Like New">Like New</option>
@@ -490,7 +610,7 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
               )}
             </div>
             <div className="form-group">
-              <label>Listing Price (£)</label>
+              <label>Listing Price (£) *</label>
               <input type="number" name="listing_price" value={reviewData.listing_price} onChange={handleReviewInputChange} step="0.01" placeholder="Your asking price" />
             </div>
             <div className="form-group">

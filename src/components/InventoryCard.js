@@ -20,6 +20,8 @@ function InventoryCard({
   onReturnItem,
   onFlagReturn,
   onUnflagReturn,
+  onCheckPrice,
+  onToggleMarketplaceStatus,
   onOpenFolder,
   onUploadPurchaseReceipt,
   boxes
@@ -28,6 +30,16 @@ function InventoryCard({
   const [soldPriceInput, setSoldPriceInput] = useState('');
   const [sellingFeesInput, setSellingFeesInput] = useState('');
   const [soldPlatformInput, setSoldPlatformInput] = useState('');
+  const [isCheckingPrice, setIsCheckingPrice] = useState(false);
+
+  const handleCheckPriceClick = async () => {
+    setIsCheckingPrice(true);
+    try {
+      await onCheckPrice(item.id);
+    } finally {
+      setIsCheckingPrice(false);
+    }
+  };
 
   const handleReceiptFileSelected = (e) => {
     const file = e.target.files[0];
@@ -198,6 +210,19 @@ function InventoryCard({
             <div className="card-title">
               <h3>{item.brand} {item.category}</h3>
               <p className="card-meta">{item.size} • {item.condition}</p>
+              {item.ebay_estimated_median != null ? (
+                <p className="card-estimate">
+                  📊 Est. £{parseFloat(item.ebay_estimated_low).toFixed(2)}–£{parseFloat(item.ebay_estimated_high).toFixed(2)} (median £{parseFloat(item.ebay_estimated_median).toFixed(2)}) · {item.ebay_estimated_count} active
+                  {' '}
+                  <button className="card-estimate-refresh" onClick={handleCheckPriceClick} disabled={isCheckingPrice}>
+                    {isCheckingPrice ? 'checking...' : '↻ refresh'}
+                  </button>
+                </p>
+              ) : (
+                <button className="card-estimate-check-btn" onClick={handleCheckPriceClick} disabled={isCheckingPrice}>
+                  {isCheckingPrice ? 'Checking eBay...' : '🔍 Check eBay price'}
+                </button>
+              )}
             </div>
             <div className={`status-light ${getStatusColor(item.status)}`}></div>
           </div>
@@ -267,6 +292,25 @@ function InventoryCard({
                         <span>{item.size}</span>
                       </div>
                     )}
+
+                    <div className="marketplace-status-row">
+                      <button
+                        type="button"
+                        className="marketplace-toggle"
+                        onClick={() => onToggleMarketplaceStatus(item.id, 'active_on_ebay', !item.active_on_ebay)}
+                      >
+                        <span className={`status-dot ${item.active_on_ebay ? 'online' : 'offline'}`}></span>
+                        eBay {item.active_on_ebay ? 'Active' : 'Not marked active'}
+                      </button>
+                      <button
+                        type="button"
+                        className="marketplace-toggle"
+                        onClick={() => onToggleMarketplaceStatus(item.id, 'active_on_vinted', !item.active_on_vinted)}
+                      >
+                        <span className={`status-dot ${item.active_on_vinted ? 'online' : 'offline'}`}></span>
+                        Vinted {item.active_on_vinted ? 'Active' : 'Not marked active'}
+                      </button>
+                    </div>
                   </>
                 )}
 

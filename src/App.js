@@ -181,6 +181,38 @@ function App() {
     }
   };
 
+  const handleToggleMarketplaceStatus = async (itemId, field, value) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/marketplace-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value })
+      });
+      if (!response.ok) throw new Error('Failed to update marketplace status');
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update marketplace status.');
+    }
+  };
+
+  const handleCheckItemPrice = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/price-check`, { method: 'POST' });
+      if (!response.ok) throw new Error('Price check failed');
+      const updatedItem = await response.json();
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+    } catch (err) {
+      console.error(err);
+      alert('Failed to check eBay price for this item.');
+    }
+  };
+
   const handleUploadPurchaseReceipt = async (itemId, file) => {
     try {
       const formData = new FormData();
@@ -391,6 +423,8 @@ function App() {
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}
+                  onCheckPrice={handleCheckItemPrice}
+                  onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
                   onUnflagReturn={handleUnflagReturn}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                 />
@@ -422,6 +456,8 @@ function App() {
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}
+                  onCheckPrice={handleCheckItemPrice}
+                  onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
                   onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
@@ -508,6 +544,8 @@ function App() {
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}
+                  onCheckPrice={handleCheckItemPrice}
+                  onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
                   onUnflagReturn={handleUnflagReturn}
                   onOpenFolder={handleOpenFolder}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
