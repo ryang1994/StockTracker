@@ -238,6 +238,10 @@ function BookkeepingPage() {
     window.open(`${API_URL}/bookkeeping/export?taxYear=${selectedYear}`, '_blank');
   };
 
+  const handleExportReceiptsZip = () => {
+    window.open(`${API_URL}/bookkeeping/export/receipts-zip?taxYear=${selectedYear}`, '_blank');
+  };
+
   if (loading && !summary) {
     return <p className="no-items">Loading bookkeeping data...</p>;
   }
@@ -417,6 +421,9 @@ function BookkeepingPage() {
               </button>
               <button className="btn-cancel" onClick={handleExport}>
                 ⬇️ Export This Tax Year (CSV)
+              </button>
+              <button className="btn-cancel" onClick={handleExportReceiptsZip}>
+                🗂️ Export All Receipts (ZIP)
               </button>
             </div>
           </div>

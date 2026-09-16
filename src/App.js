@@ -88,7 +88,9 @@ function App() {
     setCurrentPage(page);
     if (page === 'personal') {
       fetchItems('personal');
-    } else if (page === 'dashboard' || page === 'dispatch') {
+    } else if (page === 'damaged') {
+      fetchItems('damaged');
+    } else if (page === 'dashboard' || page === 'awaiting-dispatch' || page === 'dispatched') {
       fetchItems('stock');
     }
   };
@@ -129,9 +131,40 @@ function App() {
         item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
       ));
       setStatsRefresh(prev => prev + 1);
+
+      if (updatedItem.ebayWithdrawal) {
+        if (updatedItem.ebayWithdrawal.success) {
+          alert('✅ Sold recorded - the eBay listing has been automatically removed.');
+        } else {
+          alert('⚠️ Sold recorded, but the eBay listing could not be removed automatically. Please remove it manually.');
+        }
+      }
     } catch (err) {
       console.error(err);
       alert('Failed to mark item as sold.');
+    }
+  };
+
+  const handleWithdrawEbay = async (itemId) => {
+    try {
+      const response = await fetch(`${API_URL}/items/${itemId}/withdraw-ebay`, {
+        method: 'POST'
+      });
+
+      const updatedItem = await response.json();
+
+      if (!response.ok) {
+        alert('⚠️ Could not remove the eBay listing. Please remove it manually.');
+        return;
+      }
+
+      setItems(items.map(item =>
+        item.id === updatedItem.id ? { ...updatedItem, images: item.images } : item
+      ));
+      alert('✅ The eBay listing has been removed.');
+    } catch (err) {
+      console.error(err);
+      alert('⚠️ Could not remove the eBay listing. Please remove it manually.');
     }
   };
 
@@ -396,8 +429,7 @@ function App() {
     ALL: dashboardItems.length,
     SELLING: dashboardItems.filter(i => i.status === 'ACTIVE' || i.status === 'LISTED').length,
     DRAFT: dashboardItems.filter(i => i.status === 'DRAFT').length,
-    ATTENTION: dashboardItems.filter(i => i.needs_attention).length,
-    DISPATCH: awaitingDispatch.length + recentlyDispatched.length
+    ATTENTION: dashboardItems.filter(i => i.needs_attention).length
   };
 
   const renderPage = () => {
@@ -428,12 +460,11 @@ function App() {
                   hiddenAspects={hiddenAspects} onBoxesChanged={fetchBoxes} />;
     }
 
-    if (currentPage === 'dispatch') {
+    if (currentPage === 'awaiting-dispatch') {
       return (
         <section className="inventory-section">
-          <h2>Dispatch</h2>
+          <h2>📦 Awaiting Dispatch ({awaitingDispatch.length})</h2>
 
-          <h3 className="dispatch-section-title">📦 Awaiting Dispatch ({awaitingDispatch.length})</h3>
           {awaitingDispatch.length === 0 ? (
             <p className="no-items">Nothing waiting to be dispatched.</p>
           ) : (
@@ -455,6 +486,7 @@ function App() {
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
+                  onWithdrawEbay={handleWithdrawEbay}
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}
@@ -467,8 +499,15 @@ function App() {
               ))}
             </div>
           )}
+        </section>
+      );
+    }
 
-          <h3 className="dispatch-section-title">✅ Recently Dispatched ({recentlyDispatched.length})</h3>
+    if (currentPage === 'dispatched') {
+      return (
+        <section className="inventory-section">
+          <h2>✅ Dispatched ({recentlyDispatched.length})</h2>
+
           {recentlyDispatched.length === 0 ? (
             <p className="no-items">No recently dispatched items.</p>
           ) : (
@@ -490,6 +529,7 @@ function App() {
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
+                  onWithdrawEbay={handleWithdrawEbay}
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}
@@ -538,9 +578,51 @@ function App() {
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
+                  onWithdrawEbay={handleWithdrawEbay}
                   onCheckPrice={handleCheckItemPrice}
                   onToggleMarketplaceStatus={handleToggleMarketplaceStatus}
                   onCategorySaved={handleCategorySaved}
+                  onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
+                  onOpenFolder={handleOpenFolder}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (currentPage === 'damaged') {
+      return (
+        <section className="inventory-section">
+          <h2>🗑️ Damaged / Written Off ({items.length})</h2>
+          <p className="review-hint">
+            Stock too damaged to list - kept separate from active inventory, but its purchase cost
+            still counts as a genuine business expense in Bookkeeping. Add one from the Dashboard's
+            photo flow and choose "Damaged" as the item type, with a photo showing the damage itself.
+          </p>
+          {loading ? (
+            <p className="no-items">Loading...</p>
+          ) : items.length === 0 ? (
+            <p className="no-items">Nothing written off yet.</p>
+          ) : (
+            <div className="inventory-list">
+              {items.map(item => (
+                <InventoryCard
+                  key={item.id}
+                  item={item}
+                  boxes={boxes}
+                  hiddenAspects={hiddenAspects}
+                  isEditing={editingItemId === item.id}
+                  editFormData={editFormData}
+                  activeImageIndex={activeImageIndex[item.id]}
+                  onThumbnailClick={handleThumbnailClick}
+                  onStatusChange={handleStatusChange}
+                  onEditClick={handleEditClick}
+                  onEditInputChange={handleEditInputChange}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onDeleteItem={handleDeleteItem}
                   onUploadPurchaseReceipt={handleUploadPurchaseReceipt}
                   onOpenFolder={handleOpenFolder}
                 />
@@ -596,9 +678,15 @@ function App() {
             </button>
             <button
               className="filter-tab"
-              onClick={() => setCurrentPage('dispatch')}
+              onClick={() => setCurrentPage('awaiting-dispatch')}
             >
-              📦 Dispatch ({counts.DISPATCH})
+              📦 Awaiting Dispatch ({awaitingDispatch.length})
+            </button>
+            <button
+              className="filter-tab"
+              onClick={() => setCurrentPage('dispatched')}
+            >
+              ✅ Dispatched ({recentlyDispatched.length})
             </button>
           </div>
 
@@ -625,6 +713,7 @@ function App() {
                   onSaveEdit={handleSaveEdit}
                   onDeleteItem={handleDeleteItem}
                   onConfirmSale={handleConfirmSale}
+                  onWithdrawEbay={handleWithdrawEbay}
                   onMarkDispatched={handleMarkDispatched}
                   onReturnItem={handleReturnItem}
                   onFlagReturn={handleFlagReturn}

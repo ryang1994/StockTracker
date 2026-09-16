@@ -12,6 +12,8 @@ function SettingsPage({ boxes, onBoxesChanged }) {
   const [editingBoxName, setEditingBoxName] = useState('');
 
   const [dispatchForm, setDispatchForm] = useState({ ebay_dispatch_days: '', vinted_dispatch_days: '', archive_after_days: '' });
+  const [syncIntervalForm, setSyncIntervalForm] = useState({ sale_check_interval_minutes: '' });
+  const [syncStatus, setSyncStatus] = useState(null);
   const [hiddenAspectsInput, setHiddenAspectsInput] = useState('');
   const [ebayForm, setEbayForm] = useState({ ebay_api_key: '', ebay_active: false });
   const [ebayStatus, setEbayStatus] = useState({ connected: false });
@@ -32,6 +34,9 @@ function SettingsPage({ boxes, onBoxesChanged }) {
         ebay_dispatch_days: data.ebay_dispatch_days || '2',
         vinted_dispatch_days: data.vinted_dispatch_days || '3',
         archive_after_days: data.archive_after_days || '30'
+      });
+      setSyncIntervalForm({
+        sale_check_interval_minutes: data.sale_check_interval_minutes || '15'
       });
       setHiddenAspectsInput(data.ebay_hidden_aspects || 'Garment Care,MPN,Pattern,Product Line');
       setEbayForm({
@@ -69,6 +74,16 @@ function SettingsPage({ boxes, onBoxesChanged }) {
     } catch (err) {
       console.error('Failed to check eBay status:', err);
       setEbayStatus({ connected: false });
+    }
+  }, []);
+
+  const checkSyncStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/sync/status`);
+      const data = await response.json();
+      setSyncStatus(data);
+    } catch (err) {
+      console.error('Failed to check sync status:', err);
     }
   }, []);
 
@@ -163,9 +178,10 @@ function SettingsPage({ boxes, onBoxesChanged }) {
     fetchAppSettings();
     checkAiStatus();
     checkEbayStatus();
+    checkSyncStatus();
     checkPolicyStatus();
     checkLocationStatus();
-  }, [fetchAppSettings, checkAiStatus, checkEbayStatus, checkPolicyStatus, checkLocationStatus]);
+  }, [fetchAppSettings, checkAiStatus, checkEbayStatus, checkSyncStatus, checkPolicyStatus, checkLocationStatus]);
 
   const saveAppSettings = async (updates) => {
     try {
@@ -404,6 +420,42 @@ function SettingsPage({ boxes, onBoxesChanged }) {
         </a>
       </div>
 
+      {/* Sale detection - the scheduled job that checks for orders + runs the archive sweep */}
+      {ebayStatus.connected && (
+        <div className="settings-card">
+          <h3>🔄 Sale Detection Sync</h3>
+          <p className="review-hint">
+            A background job checks eBay for new orders and auto-fills sold price/platform/date on a match,
+            then runs the photo archive sweep on the same schedule. It runs on the server every couple of
+            minutes but only actually does the check once the interval below has passed, so this number is
+            genuinely how often it checks - not how often the server wakes up.
+          </p>
+
+          <div className="status-row">
+            <span className={`status-dot ${syncStatus?.lastSyncAt ? 'online' : 'offline'}`}></span>
+            <span>
+              {syncStatus?.lastSyncAt
+                ? `Last checked ${new Date(syncStatus.lastSyncAt).toLocaleString('en-GB')}`
+                : 'Not run yet'}
+            </span>
+            <button className="btn-cancel settings-inline-btn" onClick={checkSyncStatus}>Recheck</button>
+          </div>
+
+          <div className="review-grid">
+            <div className="form-group">
+              <label>Check interval (minutes)</label>
+              <input
+                type="number"
+                min="2"
+                value={syncIntervalForm.sale_check_interval_minutes}
+                onChange={(e) => setSyncIntervalForm({ sale_check_interval_minutes: e.target.value })}
+              />
+            </div>
+          </div>
+          <button className="btn-add" onClick={() => saveAppSettings(syncIntervalForm)}>Save Interval</button>
+        </div>
+      )}
+
       {/* eBay Business Policies - required before any listing can publish */}
       {ebayStatus.connected && (
         <div className="settings-card">
@@ -423,28 +475,29 @@ function SettingsPage({ boxes, onBoxesChanged }) {
             <button className="btn-add" onClick={handleOptIn} disabled={policyLoading}>
               {policyLoading ? 'Opting in...' : 'Opt In to Business Policies'}
             </button>
+          ) : policyStatus.policiesValid ? (
+            <p className="price-check-range">✅ Policies already created and ready to use.</p>
           ) : (
             <>
-              {appSettings.ebay_fulfillment_policy_id ? (
-                <p className="price-check-range">✅ Policies already created and ready to use.</p>
-              ) : (
-                <>
-                  <div className="review-grid">
-                    <div className="form-group">
-                      <label>Flat Shipping Cost (£)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={flatShippingCost}
-                        onChange={(e) => setFlatShippingCost(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button className="btn-add" onClick={handleCreatePolicies} disabled={policyLoading}>
-                    {policyLoading ? 'Creating...' : 'Create Business Policies'}
-                  </button>
-                </>
+              {policyStatus.invalidPolicies && policyStatus.invalidPolicies.length > 0 && (
+                <p className="camera-error">
+                  ⚠️ {policyStatus.invalidPolicies.join(', ')} polic{policyStatus.invalidPolicies.length > 1 ? 'ies are' : 'y is'} no longer valid on eBay - create below to fix.
+                </p>
               )}
+              <div className="review-grid">
+                <div className="form-group">
+                  <label>Flat Shipping Cost (£)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={flatShippingCost}
+                    onChange={(e) => setFlatShippingCost(e.target.value)}
+                  />
+                </div>
+              </div>
+              <button className="btn-add" onClick={handleCreatePolicies} disabled={policyLoading}>
+                {policyLoading ? 'Creating...' : 'Create Business Policies'}
+              </button>
             </>
           )}
         </div>
@@ -463,6 +516,10 @@ function SettingsPage({ boxes, onBoxesChanged }) {
             <span>{locationStatus.configured ? 'Location set up' : 'Not set up yet'}</span>
             <button className="btn-cancel settings-inline-btn" onClick={checkLocationStatus}>Recheck</button>
           </div>
+
+          {locationStatus.reason && (
+            <p className="camera-error">⚠️ {locationStatus.reason}</p>
+          )}
 
           {!locationStatus.configured && (
             <>

@@ -301,14 +301,14 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
         department: reviewData.department,
         purchase_cost: reviewData.purchase_cost,
         listing_price: reviewData.listing_price,
-        status: 'DRAFT',
+        status: reviewData.item_type === 'damaged' ? 'DAMAGED' : 'DRAFT',
         box_id: reviewData.box_id,
         quantity: reviewData.quantity || 1,
         ebay_estimated_low: priceCheck ? priceCheck.lowPrice : null,
         ebay_estimated_high: priceCheck ? priceCheck.highPrice : null,
         ebay_estimated_median: priceCheck ? priceCheck.medianPrice : null,
         ebay_estimated_count: priceCheck ? priceCheck.totalActive : null,
-        item_type: reviewData.item_type === 'personal' ? 'personal' : 'stock'
+        item_type: ['personal', 'damaged'].includes(reviewData.item_type) ? reviewData.item_type : 'stock'
       };
 
       const response = await fetch(`${API_URL}/items`, {
@@ -507,6 +507,7 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
             >
               <option value="stock">Stock (business reselling)</option>
               <option value="personal">Personal (not business stock)</option>
+              <option value="damaged">Damaged (write-off, not for sale)</option>
             </select>
           </div>
 
@@ -604,6 +605,7 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
               <label>Condition *</label>
               <select name="condition" value={reviewData.condition} onChange={handleReviewInputChange}>
                 <option value="">Select condition</option>
+                <option value="New with tags">New with tags</option>
                 <option value="Like New">Like New</option>
                 <option value="Very Good">Very Good</option>
                 <option value="Good">Good</option>

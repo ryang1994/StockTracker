@@ -44,6 +44,7 @@ function InventoryCard({
   onSaveEdit,
   onDeleteItem,
   onConfirmSale,
+  onWithdrawEbay,
   onMarkDispatched,
   onReturnItem,
   onFlagReturn,
@@ -341,6 +342,7 @@ function InventoryCard({
           <input type="text" name="outer_shell_material" value={editFormData.outer_shell_material} onChange={onEditInputChange} placeholder="Outer Shell Material" />
           <select name="condition" value={editFormData.condition} onChange={onEditInputChange}>
             <option value="">Select condition</option>
+            <option value="New with tags">New with tags</option>
             <option value="Like New">Like New</option>
             <option value="Very Good">Very Good</option>
             <option value="Good">Good</option>
@@ -426,6 +428,7 @@ function InventoryCard({
                       <option value="LISTED">Listing</option>
                       <option value="ACTIVE">Active</option>
                       <option value="SOLD">Sold</option>
+                      {item.item_type === 'damaged' && <option value="DAMAGED">Damaged</option>}
                     </select>
                   </div>
                 )}
@@ -493,10 +496,16 @@ function InventoryCard({
                       View receipt ↗
                     </a>
                   ) : (
-                    <label className="receipt-upload-label">
-                      📄 Add receipt
-                      <input type="file" accept="image/*" onChange={handleReceiptFileSelected} style={{ display: 'none' }} />
-                    </label>
+                    <div className="receipt-upload-options">
+                      <label className="receipt-upload-label">
+                        📷 Take Photo
+                        <input type="file" accept="image/*" capture="environment" onChange={handleReceiptFileSelected} style={{ display: 'none' }} />
+                      </label>
+                      <label className="receipt-upload-label">
+                        📄 Choose File
+                        <input type="file" accept="image/*" onChange={handleReceiptFileSelected} style={{ display: 'none' }} />
+                      </label>
+                    </div>
                   )}
                 </div>
 
@@ -573,6 +582,20 @@ function InventoryCard({
                   </div>
                 )}
 
+                {item.active_on_ebay && item.ebay_offer_id && (
+                  <button
+                    type="button"
+                    className="btn-cancel delist-ebay-btn"
+                    onClick={() => {
+                      if (window.confirm('End this eBay listing now? This cannot be undone.')) {
+                        onWithdrawEbay(item.id);
+                      }
+                    }}
+                  >
+                    🔴 Delist from eBay
+                  </button>
+                )}
+
                 {item.vinted_url && (
                   <div className="info-row">
                     <span className="label">Vinted:</span>
@@ -580,6 +603,25 @@ function InventoryCard({
                       View listing ↗
                     </a>
                   </div>
+                )}
+
+                {item.active_on_vinted && ['SOLD', 'DISPATCHED', 'ARCHIVED'].includes(item.status) && (
+                  item.vinted_delisted ? (
+                    <div className="vinted-delist-banner vinted-delisted-confirmed">
+                      ✅ Delisted from Vinted{item.vinted_delisted_at ? ` on ${new Date(item.vinted_delisted_at).toLocaleDateString('en-GB')}` : ''}
+                    </div>
+                  ) : (
+                    <div className="vinted-delist-banner vinted-delist-pending">
+                      <span>⚠️ Also listed on Vinted — remember to remove it</span>
+                      <button
+                        type="button"
+                        className="btn-add"
+                        onClick={() => onToggleMarketplaceStatus(item.id, 'vinted_delisted', true)}
+                      >
+                        ✅ Confirm delisted from Vinted
+                      </button>
+                    </div>
+                  )
                 )}
 
                 {showListingTools && (
