@@ -13,6 +13,7 @@ function SettingsPage({ boxes, onBoxesChanged }) {
 
   const [dispatchForm, setDispatchForm] = useState({ ebay_dispatch_days: '', vinted_dispatch_days: '', archive_after_days: '' });
   const [syncIntervalForm, setSyncIntervalForm] = useState({ sale_check_interval_minutes: '' });
+  const [ebayFeeForm, setEbayFeeForm] = useState({ ebay_fee_percent: '' });
   const [syncStatus, setSyncStatus] = useState(null);
   const [hiddenAspectsInput, setHiddenAspectsInput] = useState('');
   const [ebayForm, setEbayForm] = useState({ ebay_api_key: '', ebay_active: false });
@@ -37,6 +38,9 @@ function SettingsPage({ boxes, onBoxesChanged }) {
       });
       setSyncIntervalForm({
         sale_check_interval_minutes: data.sale_check_interval_minutes || '15'
+      });
+      setEbayFeeForm({
+        ebay_fee_percent: data.ebay_fee_percent || '15.5'
       });
       setHiddenAspectsInput(data.ebay_hidden_aspects || 'Garment Care,MPN,Pattern,Product Line');
       setEbayForm({
@@ -139,7 +143,7 @@ function SettingsPage({ boxes, onBoxesChanged }) {
       const response = await fetch(`${API_URL}/ebay/business-policies/opt-in`, { method: 'POST' });
       const data = await response.json();
       if (!response.ok) {
-        alert('Opt-in failed: ' + (data.error || 'Unknown error') + '. This can be a known eBay Sandbox glitch - try again in a moment.');
+        alert('Opt-in failed: ' + (data.error || 'Unknown error - try again in a moment.'));
         return;
       }
       await checkPolicyStatus();
@@ -166,6 +170,7 @@ function SettingsPage({ boxes, onBoxesChanged }) {
       }
       alert('Business policies created successfully!');
       fetchAppSettings();
+      checkPolicyStatus();
     } catch (err) {
       console.error(err);
       alert('Failed to create business policies.');
@@ -411,9 +416,15 @@ function SettingsPage({ boxes, onBoxesChanged }) {
           <p className="camera-error">{ebayStatus.reason}</p>
         )}
 
-        <p className="review-hint">
-          Currently connected to eBay's Sandbox (test) environment - nothing here touches your real eBay account or live listings yet.
-        </p>
+        {ebayStatus.environment === 'production' ? (
+          <p className="production-notice">
+            ℹ️ Connected to eBay's real, live Production environment - actions here affect your genuine eBay account and real listings.
+          </p>
+        ) : (
+          <p className="review-hint">
+            Currently connected to eBay's Sandbox (test) environment - nothing here touches your real eBay account or live listings yet.
+          </p>
+        )}
 
         <a href={`${API_URL}/ebay/connect`} className="btn-add ebay-connect-btn">
           {ebayStatus.connected ? 'Reconnect to eBay' : 'Connect to eBay'}
@@ -453,6 +464,32 @@ function SettingsPage({ boxes, onBoxesChanged }) {
             </div>
           </div>
           <button className="btn-add" onClick={() => saveAppSettings(syncIntervalForm)}>Save Interval</button>
+        </div>
+      )}
+
+      {/* eBay fee estimate - used to auto-fill selling_fees on eBay sales */}
+      {ebayStatus.connected && (
+        <div className="settings-card">
+          <h3>💰 eBay Fee Estimate</h3>
+          <p className="review-hint">
+            Auto-fills the marketplace fee whenever an item sells via eBay - a percentage of the sale
+            plus a fixed 30p (orders £10 or under) or 40p (over £10) per order. Still fully editable
+            afterward on the item if a specific sale falls outside the norm. The default (15.5%) assumes
+            you're not VAT-registered, since eBay charges VAT on its own fee that you can't reclaim in
+            that case - if you're VAT-registered, the true cost is closer to 12.9%.
+          </p>
+          <div className="review-grid">
+            <div className="form-group">
+              <label>eBay fee (%)</label>
+              <input
+                type="number"
+                step="0.1"
+                value={ebayFeeForm.ebay_fee_percent}
+                onChange={(e) => setEbayFeeForm({ ebay_fee_percent: e.target.value })}
+              />
+            </div>
+          </div>
+          <button className="btn-add" onClick={() => saveAppSettings(ebayFeeForm)}>Save Fee Estimate</button>
         </div>
       )}
 

@@ -24,6 +24,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [boxes, setBoxes] = useState([]);
   const [hiddenAspects, setHiddenAspects] = useState([]);
+  const [ebayFeePercent, setEbayFeePercent] = useState(15.5);
 
   const fetchBoxes = async () => {
     try {
@@ -41,6 +42,7 @@ function App() {
       const data = await response.json();
       const list = (data.ebay_hidden_aspects || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
       setHiddenAspects(list);
+      setEbayFeePercent(parseFloat(data.ebay_fee_percent) || 15.5);
     } catch (err) {
       console.error('Failed to fetch hidden aspects setting:', err);
     }
@@ -260,9 +262,13 @@ function App() {
     ));
   };
 
-  const handleCheckItemPrice = async (itemId) => {
+  const handleCheckItemPrice = async (itemId, extraKeywords) => {
     try {
-      const response = await fetch(`${API_URL}/items/${itemId}/price-check`, { method: 'POST' });
+      const response = await fetch(`${API_URL}/items/${itemId}/price-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extra_keywords: extraKeywords || '' })
+      });
       if (!response.ok) throw new Error('Price check failed');
       const updatedItem = await response.json();
       setItems(items.map(item =>
@@ -475,6 +481,7 @@ function App() {
                   item={item}
                   boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -518,6 +525,7 @@ function App() {
                   item={item}
                   boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -567,6 +575,7 @@ function App() {
                   item={item}
                   boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -613,6 +622,7 @@ function App() {
                   item={item}
                   boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}
@@ -640,6 +650,7 @@ function App() {
         <PhotoAnalysisFlow
           boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
           onItemSaved={(newItems) => {
             fetchItems(currentPage === 'personal' ? 'personal' : 'stock');
             setStatsRefresh(prev => prev + 1);
@@ -702,6 +713,7 @@ function App() {
                   item={item}
                   boxes={boxes}
                   hiddenAspects={hiddenAspects}
+                  ebayFeePercent={ebayFeePercent}
                   isEditing={editingItemId === item.id}
                   editFormData={editFormData}
                   activeImageIndex={activeImageIndex[item.id]}

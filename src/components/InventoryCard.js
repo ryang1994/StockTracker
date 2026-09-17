@@ -53,6 +53,7 @@ function InventoryCard({
   onToggleMarketplaceStatus,
   onCategorySaved,
   hiddenAspects,
+  ebayFeePercent,
   onOpenFolder,
   onUploadPurchaseReceipt,
   boxes
@@ -61,7 +62,54 @@ function InventoryCard({
   const [soldPriceInput, setSoldPriceInput] = useState('');
   const [sellingFeesInput, setSellingFeesInput] = useState('');
   const [soldPlatformInput, setSoldPlatformInput] = useState('');
+
+  // Live-estimates the eBay fee the moment eBay is selected as the platform (or the
+  // price changes while eBay is already selected), so the figure is visible before
+  // confirming rather than hidden until after saving. Still a normal editable field -
+  // typing over it sticks, since this only recalculates on these two specific changes.
+  const estimateEbayFee = (price) => {
+    const numericPrice = parseFloat(price);
+    if (isNaN(numericPrice)) return '';
+    const perOrderFee = numericPrice > 10 ? 0.40 : 0.30;
+    return ((numericPrice * ((ebayFeePercent || 15.5) / 100)) + perOrderFee).toFixed(2);
+  };
+
+  const handleSoldPriceChange = (value) => {
+    setSoldPriceInput(value);
+    if (soldPlatformInput === 'eBay') {
+      setSellingFeesInput(estimateEbayFee(value));
+    }
+  };
+
+  const handleSoldPlatformChange = (value) => {
+    setSoldPlatformInput(value);
+    if (value === 'eBay') {
+      setSellingFeesInput(estimateEbayFee(soldPriceInput));
+    }
+  };
   const [isCheckingPrice, setIsCheckingPrice] = useState(false);
+  const [extraKeywordTags, setExtraKeywordTags] = useState([]);
+  const [extraKeywordInput, setExtraKeywordInput] = useState('');
+
+  const handleAddExtraKeywordTag = () => {
+    const trimmed = extraKeywordInput.trim();
+    if (!trimmed) return;
+    if (!extraKeywordTags.includes(trimmed)) {
+      setExtraKeywordTags(prev => [...prev, trimmed]);
+    }
+    setExtraKeywordInput('');
+  };
+
+  const handleExtraKeywordKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddExtraKeywordTag();
+    }
+  };
+
+  const handleRemoveExtraKeywordTag = (tagToRemove) => {
+    setExtraKeywordTags(prev => prev.filter(t => t !== tagToRemove));
+  };
   const [aspectDrafts, setAspectDrafts] = useState({});
   const [publishing, setPublishing] = useState(false);
 
@@ -188,8 +236,9 @@ function InventoryCard({
 
   const handleCheckPriceClick = async () => {
     setIsCheckingPrice(true);
+    const allKeywords = [...extraKeywordTags, extraKeywordInput.trim()].filter(Boolean).join(' ');
     try {
-      await onCheckPrice(item.id);
+      await onCheckPrice(item.id, allKeywords);
     } finally {
       setIsCheckingPrice(false);
     }
@@ -383,6 +432,32 @@ function InventoryCard({
                   {isCheckingPrice ? 'Checking eBay...' : '🔍 Check eBay price'}
                 </button>
               )}
+              {extraKeywordTags.length > 0 && (
+                <div className="keyword-tag-row keyword-tag-row-small">
+                  {extraKeywordTags.map((tag, idx) => (
+                    <span key={idx} className="keyword-tag">
+                      {tag}
+                      <button
+                        type="button"
+                        className="keyword-tag-remove"
+                        onClick={() => handleRemoveExtraKeywordTag(tag)}
+                        aria-label={`Remove ${tag}`}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <input
+                type="text"
+                className="price-check-keywords-input-small"
+                placeholder="Narrow search - type and press Enter"
+                value={extraKeywordInput}
+                onChange={(e) => setExtraKeywordInput(e.target.value)}
+                onKeyDown={handleExtraKeywordKeyDown}
+                onBlur={handleAddExtraKeywordTag}
+              />
             </div>
             <div className={`status-light ${getStatusColor(item.status)}`}></div>
           </div>
@@ -394,7 +469,7 @@ function InventoryCard({
                 <input
                   type="number"
                   value={soldPriceInput}
-                  onChange={(e) => setSoldPriceInput(e.target.value)}
+                  onChange={(e) => handleSoldPriceChange(e.target.value)}
                   step="0.01"
                   autoFocus
                 />
@@ -407,7 +482,7 @@ function InventoryCard({
                   placeholder="0.00"
                 />
                 <label>Sold via</label>
-                <select value={soldPlatformInput} onChange={(e) => setSoldPlatformInput(e.target.value)}>
+                <select value={soldPlatformInput} onChange={(e) => handleSoldPlatformChange(e.target.value)}>
                   <option value="">Select platform</option>
                   <option value="eBay">eBay</option>
                   <option value="Vinted">Vinted</option>

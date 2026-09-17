@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import heic2any from 'heic2any';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 const MAX_PHOTOS = 6;
@@ -19,18 +20,46 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
   const [priceCheckLoading, setPriceCheckLoading] = useState(false);
   const [priceCheckError, setPriceCheckError] = useState(null);
   const [includeStyleInSearch, setIncludeStyleInSearch] = useState(false);
+  const [otherKeywordTags, setOtherKeywordTags] = useState([]);
+  const [otherKeywordInput, setOtherKeywordInput] = useState('');
+  const [convertingPhotos, setConvertingPhotos] = useState(false);
+
+  const handleAddKeywordTag = () => {
+    const trimmed = otherKeywordInput.trim();
+    if (!trimmed) return;
+    if (!otherKeywordTags.includes(trimmed)) {
+      setOtherKeywordTags(prev => [...prev, trimmed]);
+    }
+    setOtherKeywordInput('');
+  };
+
+  const handleKeywordInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddKeywordTag();
+    }
+  };
+
+  const handleRemoveKeywordTag = (tagToRemove) => {
+    setOtherKeywordTags(prev => prev.filter(t => t !== tagToRemove));
+  };
 
   const handleCheckPrices = async () => {
     // Strip parenthetical measurements like "(146-152 cms)" - real listings rarely
     // include that verbatim, and it was killing search results entirely
     const cleanedSize = (reviewData.size || '').replace(/\([^)]*\)/g, '').trim();
 
+    // Include anything still sitting in the input box (not yet turned into a tag)
+    // too, so hitting "Check eBay Prices" straight after typing still works.
+    const allKeywords = [...otherKeywordTags, otherKeywordInput.trim()].filter(Boolean).join(' ');
+
     const parts = [
       reviewData.brand,
       reviewData.department,
       reviewData.category,
       cleanedSize,
-      includeStyleInSearch ? reviewData.style : null
+      includeStyleInSearch ? reviewData.style : null,
+      allKeywords
     ];
     const query = parts.filter(p => p && p.trim()).join(' ').trim();
 
@@ -154,8 +183,16 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
     }
   };
 
+  // Detects HEIC/HEIF files by extension as well as MIME type, since some browsers
+  // report an empty or generic type for HEIC files picked from the gallery.
+  const isLikelyHeic = (file) => {
+    const type = (file.type || '').toLowerCase();
+    const name = (file.name || '').toLowerCase();
+    return type === 'image/heic' || type === 'image/heif' || name.endsWith('.heic') || name.endsWith('.heif');
+  };
+
   // Fires when photos are picked from the gallery (from idle or from "Add More")
-  const handleFilesAdded = (e) => {
+  const handleFilesAdded = async (e) => {
     const newFiles = Array.from(e.target.files);
     e.target.value = ''; // allow picking the same file again later if needed
     if (newFiles.length === 0) return;
@@ -168,17 +205,36 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
       return combined.slice(0, MAX_PHOTOS);
     });
 
-    setPhotoPreviewUrls(prevUrls => {
-      const newUrls = newFiles.map(f => URL.createObjectURL(f));
-      return [...prevUrls, ...newUrls].slice(0, MAX_PHOTOS);
-    });
+    // HEIC (the default photo format on iPhones, and some Android phones) can't be
+    // rendered directly as a preview image by the browser, even though the phone's
+    // own gallery shows it fine. Convert just for the on-screen preview here - the
+    // original HEIC file still gets uploaded unchanged, since the backend already
+    // converts it properly for storage and AI analysis.
+    setConvertingPhotos(true);
+    try {
+      const newUrls = await Promise.all(newFiles.map(async (f) => {
+        if (!isLikelyHeic(f)) return URL.createObjectURL(f);
+        try {
+          const converted = await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.8 });
+          const blob = Array.isArray(converted) ? converted[0] : converted;
+          return URL.createObjectURL(blob);
+        } catch (conversionErr) {
+          console.error('HEIC preview conversion failed, showing a placeholder instead:', conversionErr);
+          return null;
+        }
+      }));
+
+      setPhotoPreviewUrls(prevUrls => [...prevUrls, ...newUrls].slice(0, MAX_PHOTOS));
+    } finally {
+      setConvertingPhotos(false);
+    }
 
     setStep('selecting');
   };
 
   const handleRemovePhoto = (index) => {
     setPhotoPreviewUrls(prevUrls => {
-      URL.revokeObjectURL(prevUrls[index]);
+      if (prevUrls[index]) URL.revokeObjectURL(prevUrls[index]);
       return prevUrls.filter((_, i) => i !== index);
     });
     setSelectedPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
@@ -187,7 +243,7 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
 
   const resetAll = () => {
     stopCamera();
-    photoPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    photoPreviewUrls.forEach(url => { if (url) URL.revokeObjectURL(url); });
     setStep('idle');
     setSelectedPhotos([]);
     setPhotoPreviewUrls([]);
@@ -197,6 +253,9 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
     setIsSaving(false);
     setPriceCheck(null);
     setPriceCheckError(null);
+    setIncludeStyleInSearch(false);
+    setOtherKeywordTags([]);
+    setOtherKeywordInput('');
   };
 
   const handleCancel = () => {
@@ -408,7 +467,11 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
             <div className="photo-selecting-grid">
               {photoPreviewUrls.map((url, idx) => (
                 <div key={idx} className="photo-selecting-item">
-                  <img src={url} alt={`Captured ${idx + 1}`} />
+                  {url ? (
+                    <img src={url} alt={`Captured ${idx + 1}`} />
+                  ) : (
+                    <div className="photo-preview-unavailable">📷 Preview unavailable</div>
+                  )}
                   <button
                     type="button"
                     className="photo-remove-btn"
@@ -440,11 +503,16 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
         <div className="photo-selecting-panel">
           <h3>Photos ({selectedPhotos.length}/{MAX_PHOTOS})</h3>
           <p className="review-hint">Add front, back, label — whatever you need. Tap Continue when ready.</p>
+          {convertingPhotos && <p className="review-hint">Converting photo(s) for preview...</p>}
 
           <div className="photo-selecting-grid">
             {photoPreviewUrls.map((url, idx) => (
               <div key={idx} className="photo-selecting-item">
-                <img src={url} alt={`Selected ${idx + 1}`} />
+                {url ? (
+                  <img src={url} alt={`Selected ${idx + 1}`} />
+                ) : (
+                  <div className="photo-preview-unavailable">📷 Preview unavailable<br />(photo will still upload fine)</div>
+                )}
                 <button
                   type="button"
                   className="photo-remove-btn"
@@ -523,6 +591,34 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
               </label>
             )}
 
+            {otherKeywordTags.length > 0 && (
+              <div className="keyword-tag-row">
+                {otherKeywordTags.map((tag, idx) => (
+                  <span key={idx} className="keyword-tag">
+                    {tag}
+                    <button
+                      type="button"
+                      className="keyword-tag-remove"
+                      onClick={() => handleRemoveKeywordTag(tag)}
+                      aria-label={`Remove ${tag}`}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <input
+              type="text"
+              className="price-check-keywords-input"
+              placeholder="Other keywords to narrow the search - type and press Enter"
+              value={otherKeywordInput}
+              onChange={(e) => setOtherKeywordInput(e.target.value)}
+              onKeyDown={handleKeywordInputKeyDown}
+              onBlur={handleAddKeywordTag}
+            />
+
             <button type="button" className="btn-cancel price-check-btn" onClick={handleCheckPrices} disabled={priceCheckLoading}>
               {priceCheckLoading ? 'Checking eBay...' : '🔍 Check eBay Prices'}
             </button>
@@ -556,13 +652,23 @@ function PhotoAnalysisFlow({ onItemSaved, boxes }) {
               <p className="photo-select-label">Choose main photo:</p>
               <div className="photo-select-row">
                 {photoPreviewUrls.map((url, idx) => (
-                  <img
-                    key={idx}
-                    src={url}
-                    alt={`option ${idx + 1}`}
-                    className={`photo-select-thumb ${mainPhotoIndex === idx ? 'selected' : ''}`}
-                    onClick={() => setMainPhotoIndex(idx)}
-                  />
+                  url ? (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`option ${idx + 1}`}
+                      className={`photo-select-thumb ${mainPhotoIndex === idx ? 'selected' : ''}`}
+                      onClick={() => setMainPhotoIndex(idx)}
+                    />
+                  ) : (
+                    <div
+                      key={idx}
+                      className={`photo-select-thumb photo-preview-unavailable-small ${mainPhotoIndex === idx ? 'selected' : ''}`}
+                      onClick={() => setMainPhotoIndex(idx)}
+                    >
+                      📷
+                    </div>
+                  )
                 ))}
               </div>
             </div>
